@@ -1,4 +1,5 @@
 import os
+import platform
 import customtkinter as ctk
 
 from PIL import Image, ImageTk
@@ -14,8 +15,18 @@ class App(ctk.CTk):
         self.geometry("1024x600")
 
         # APP LOGO
-        self.logo = ImageTk.PhotoImage(file="assets/img/logo.ico")
-        self.iconbitmap("assets/img/logo.ico")
+        
+
+        os_name = platform.system()
+        if os_name == "Windows":
+            self.logo = ImageTk.PhotoImage(file="assets/img/logo.ico")
+            self.iconbitmap("assets/img/logo.ico")
+            print("Windows detected")
+        else:
+            path = Image.open("assets/img/logo.png")
+            self.logo = ImageTk.PhotoImage(path)
+            self.iconphoto(True, self.logo)
+            print("Non-Windows OS detected")
 
         # FONT
         self.montserrat = ctk.CTkFont(family="Montserrat", size=14)
