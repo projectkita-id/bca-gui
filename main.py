@@ -2,7 +2,6 @@ import os
 import customtkinter as ctk
 
 from PIL import Image, ImageTk
-from components.fonts import Montserrat
 from components.scanner_input import ScannerInput
 from components.error_dialog import ErrorDialog as errorDialog
 
@@ -19,14 +18,14 @@ class App(ctk.CTk):
         self.iconbitmap("assets/img/logo.ico")
 
         # FONT
-        self.montserrat = ctk.CTkFont(family=Montserrat, size=14)
-        self.montserrat_bold = ctk.CTkFont(family=Montserrat, size=14, weight="bold")
-        self.montserrat_medium = ctk.CTkFont(family=Montserrat, size=16)
-        self.montserrat_medium_bold = ctk.CTkFont(family=Montserrat, size=16, weight="bold")
-        self.montserrat_big = ctk.CTkFont(family=Montserrat, size=20)
-        self.montserrat_big_bold = ctk.CTkFont(family=Montserrat, size=20, weight="bold")
-        self.montserrat_xl = ctk.CTkFont(family=Montserrat, size=24)
-        self.montserrat_xl_bold = ctk.CTkFont(family=Montserrat, size=24, weight="bold")
+        self.montserrat = ctk.CTkFont(family="Montserrat", size=14)
+        self.montserrat_bold = ctk.CTkFont(family="Montserrat", size=14, weight="bold")
+        self.montserrat_medium = ctk.CTkFont(family="Montserrat", size=16)
+        self.montserrat_medium_bold = ctk.CTkFont(family="Montserrat", size=16, weight="bold")
+        self.montserrat_big = ctk.CTkFont(family="Montserrat", size=20)
+        self.montserrat_big_bold = ctk.CTkFont(family="Montserrat", size=20, weight="bold")
+        self.montserrat_xl = ctk.CTkFont(family="Montserrat", size=24)
+        self.montserrat_xl_bold = ctk.CTkFont(family="Montserrat", size=24, weight="bold")
 
         # SCANNER BUFFER
         self.buffer = ""
