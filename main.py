@@ -1,4 +1,3 @@
-# main.py
 import os
 import platform
 import time
@@ -18,13 +17,13 @@ ctk.set_default_color_theme("blue")
 # Color Palette
 BCA_BLUE = "#1454fb"
 BCA_DARK_BLUE = "#0d3ea8"
-BG_MAIN = "#ffffff"           # Background putih
-CARD_BG = "#f8f9ff"           # Card dengan slight blue tint
-ENTRY_BG = "#ffffff"          # Entry putih
-ENTRY_BORDER = "#1454fb"      # Border biru BCA
-TEXT_PRIMARY = "#1a1a2e"      # Text gelap
-TEXT_SECONDARY = "#0d3ea8"    # Text biru
-HEADER_BG = "#e8ecff"         # Header dengan blue tint
+BG_MAIN = "#ffffff"
+CARD_BG = "#f8f9ff"
+ENTRY_BG = "#ffffff"
+ENTRY_BORDER = "#1454fb"
+TEXT_PRIMARY = "#1a1a2e"
+TEXT_SECONDARY = "#0d3ea8"
+HEADER_BG = "#e8ecff"
 
 
 class ScannerCard(ctk.CTkFrame):
@@ -33,8 +32,8 @@ class ScannerCard(ctk.CTkFrame):
 
         self.configure(
             fg_color=CARD_BG,
-            corner_radius=16,
-            border_width=3,
+            corner_radius=12,
+            border_width=2,
             border_color=BCA_BLUE,
         )
 
@@ -42,31 +41,31 @@ class ScannerCard(ctk.CTkFrame):
         header = ctk.CTkFrame(
             self,
             fg_color="transparent",
-            height=50,
+            height=35,
         )
-        header.pack(fill="x", padx=20, pady=(15, 10))
+        header.pack(fill="x", padx=12, pady=(8, 5))
         header.pack_propagate(False)
 
         # Title
         self.title_label = ctk.CTkLabel(
             header,
             text=title,
-            font=ctk.CTkFont(family="Segoe UI", size=20, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
             text_color=BCA_BLUE,
             anchor="w",
         )
         self.title_label.pack(side="left", fill="x", expand=True)
 
-        # Delete Button (🗑️ icon)
+        # Delete Button
         self.delete_btn = ctk.CTkButton(
             header,
             text="🗑️",
-            width=40,
-            height=40,
-            font=ctk.CTkFont(size=20),
+            width=32,
+            height=32,
+            font=ctk.CTkFont(size=16),
             fg_color="#ff4444",
             hover_color="#cc0000",
-            corner_radius=8,
+            corner_radius=6,
             command=self.clear,
         )
         self.delete_btn.pack(side="right")
@@ -74,17 +73,17 @@ class ScannerCard(ctk.CTkFrame):
         # ENTRY FIELD
         self.entry = ctk.CTkEntry(
             self,
-            height=60,
-            corner_radius=12,
-            font=ctk.CTkFont(family="Consolas", size=16),
+            height=40,
+            corner_radius=8,
+            font=ctk.CTkFont(family="Consolas", size=13),
             fg_color=ENTRY_BG,
-            border_width=3,
+            border_width=2,
             border_color=ENTRY_BORDER,
             text_color=TEXT_PRIMARY,
             placeholder_text="",
             justify="left",
         )
-        self.entry.pack(fill="x", padx=20, pady=(0, 20))
+        self.entry.pack(fill="x", padx=12, pady=(0, 10))
 
     def set_value(self, text: str):
         self.entry.delete(0, "end")
@@ -100,13 +99,13 @@ class App(ctk.CTk):
 
         # ---------- ROOT CONFIG ----------
         self.title("Envelope Sorting System")
-        self.geometry("1280x720")
-        self.minsize(1100, 650)
+        self.geometry("1024x600")
+        self.minsize(1024, 600)
 
-        # fonts
-        self.font_big_bold = ctk.CTkFont("Segoe UI", 22, "bold")
-        self.font_med = ctk.CTkFont("Segoe UI", 16)
-        self.font_med_bold = ctk.CTkFont("Segoe UI", 16, "bold")
+        # fonts - reduced sizes
+        self.font_big_bold = ctk.CTkFont("Segoe UI", 16, "bold")
+        self.font_med = ctk.CTkFont("Segoe UI", 12)
+        self.font_med_bold = ctk.CTkFont("Segoe UI", 12, "bold")
 
         # serial
         self.arduino = None
@@ -129,7 +128,7 @@ class App(ctk.CTk):
         self._build_monitor()
 
         # ---------- SERIAL ----------
-        self._refresh_ports()  # Populate port list
+        self._refresh_ports()
         self._connect_arduino()
         self._start_status_loop()
 
@@ -140,13 +139,12 @@ class App(ctk.CTk):
     # ================== UI BUILD ==================
 
     def _build_header(self):
-        header = ctk.CTkFrame(self, fg_color="transparent", height=100)
-        header.pack(fill="x", pady=(20, 20))
+        header = ctk.CTkFrame(self, fg_color="transparent", height=70)
+        header.pack(fill="x", pady=(10, 10))
         header.pack_propagate(False)
 
-        # Container untuk logo dan status
         content = ctk.CTkFrame(header, fg_color="transparent")
-        content.pack(fill="both", expand=True, padx=50)
+        content.pack(fill="both", expand=True, padx=30)
 
         # Logo di kiri
         logo_frame = ctk.CTkFrame(content, fg_color="transparent")
@@ -154,7 +152,7 @@ class App(ctk.CTk):
 
         logo_path = os.path.join("assets", "img", "logo.png")
         if os.path.exists(logo_path):
-            img = ctk.CTkImage(Image.open(logo_path), size=(180, 60))
+            img = ctk.CTkImage(Image.open(logo_path), size=(140, 45))
             logo = ctk.CTkLabel(logo_frame, image=img, text="")
             logo.image = img
             logo.pack()
@@ -162,7 +160,7 @@ class App(ctk.CTk):
             title = ctk.CTkLabel(
                 logo_frame,
                 text="BCA",
-                font=ctk.CTkFont("Segoe UI", 48, "bold"),
+                font=ctk.CTkFont("Segoe UI", 36, "bold"),
                 text_color=BCA_BLUE,
             )
             title.pack()
@@ -175,23 +173,23 @@ class App(ctk.CTk):
         arduino_container = ctk.CTkFrame(
             status_frame,
             fg_color="#f0f0f0",
-            corner_radius=10,
+            corner_radius=8,
             border_width=2,
             border_color="#cccccc",
         )
-        arduino_container.pack(pady=(0, 8))
+        arduino_container.pack(pady=(0, 6))
 
         arduino_inner = ctk.CTkFrame(arduino_container, fg_color="transparent")
-        arduino_inner.pack(padx=15, pady=10)
+        arduino_inner.pack(padx=10, pady=6)
 
         self.arduino_status_indicator = ctk.CTkLabel(
             arduino_inner,
             text="●",
-            font=ctk.CTkFont(size=28),
+            font=ctk.CTkFont(size=20),
             text_color="#ff4444",
-            width=35,
+            width=25,
         )
-        self.arduino_status_indicator.pack(side="left", padx=(0, 8))
+        self.arduino_status_indicator.pack(side="left", padx=(0, 6))
 
         arduino_text_frame = ctk.CTkFrame(arduino_inner, fg_color="transparent")
         arduino_text_frame.pack(side="left")
@@ -199,7 +197,7 @@ class App(ctk.CTk):
         ctk.CTkLabel(
             arduino_text_frame,
             text="Arduino",
-            font=ctk.CTkFont("Segoe UI", 11, "bold"),
+            font=ctk.CTkFont("Segoe UI", 10, "bold"),
             text_color=TEXT_PRIMARY,
             anchor="w",
         ).pack(anchor="w")
@@ -207,7 +205,7 @@ class App(ctk.CTk):
         self.arduino_port_label = ctk.CTkLabel(
             arduino_text_frame,
             text="Disconnected",
-            font=ctk.CTkFont("Segoe UI", 9),
+            font=ctk.CTkFont("Segoe UI", 8),
             text_color=TEXT_SECONDARY,
             anchor="w",
         )
@@ -217,23 +215,23 @@ class App(ctk.CTk):
         system_container = ctk.CTkFrame(
             status_frame,
             fg_color="#f0f0f0",
-            corner_radius=10,
+            corner_radius=8,
             border_width=2,
             border_color="#cccccc",
         )
         system_container.pack()
 
         system_inner = ctk.CTkFrame(system_container, fg_color="transparent")
-        system_inner.pack(padx=15, pady=10)
+        system_inner.pack(padx=10, pady=6)
 
         self.system_status_indicator = ctk.CTkLabel(
             system_inner,
             text="●",
-            font=ctk.CTkFont(size=28),
+            font=ctk.CTkFont(size=20),
             text_color="#ff4444",
-            width=35,
+            width=25,
         )
-        self.system_status_indicator.pack(side="left", padx=(0, 8))
+        self.system_status_indicator.pack(side="left", padx=(0, 6))
 
         system_text_frame = ctk.CTkFrame(system_inner, fg_color="transparent")
         system_text_frame.pack(side="left")
@@ -241,7 +239,7 @@ class App(ctk.CTk):
         ctk.CTkLabel(
             system_text_frame,
             text="System",
-            font=ctk.CTkFont("Segoe UI", 11, "bold"),
+            font=ctk.CTkFont("Segoe UI", 10, "bold"),
             text_color=TEXT_PRIMARY,
             anchor="w",
         ).pack(anchor="w")
@@ -249,7 +247,7 @@ class App(ctk.CTk):
         self.system_status_label = ctk.CTkLabel(
             system_text_frame,
             text="STOPPED",
-            font=ctk.CTkFont("Segoe UI", 9),
+            font=ctk.CTkFont("Segoe UI", 8),
             text_color=TEXT_SECONDARY,
             anchor="w",
         )
@@ -257,21 +255,20 @@ class App(ctk.CTk):
 
     def _build_scanners(self):
         container = ctk.CTkFrame(self, fg_color="transparent")
-        container.pack(fill="x", padx=50, pady=(0, 20))
+        container.pack(fill="x", padx=30, pady=(0, 8))
 
         self.scanner1 = ScannerCard(container, "SCANNER 1")
-        self.scanner1.pack(fill="x", pady=(0, 15))
+        self.scanner1.pack(fill="x", pady=(0, 8))
 
         self.scanner2 = ScannerCard(container, "SCANNER 2")
-        self.scanner2.pack(fill="x", pady=(0, 15))
+        self.scanner2.pack(fill="x", pady=(0, 8))
 
         self.scanner3 = ScannerCard(container, "SCANNER 3")
         self.scanner3.pack(fill="x")
 
     def _build_control_panel(self):
-        # Minimal control - hanya START dan STOP button tanpa status label
-        frame = ctk.CTkFrame(self, fg_color="transparent", height=80)
-        frame.pack(fill="x", padx=50, pady=(10, 20))
+        frame = ctk.CTkFrame(self, fg_color="transparent", height=55)
+        frame.pack(fill="x", padx=30, pady=(5, 8))
         frame.pack_propagate(False)
 
         btn_container = ctk.CTkFrame(frame, fg_color="transparent")
@@ -282,45 +279,44 @@ class App(ctk.CTk):
             text="START SYSTEM",
             fg_color="#0f9d58",
             hover_color="#0b7c45",
-            height=50,
-            width=200,
+            height=40,
+            width=160,
             font=self.font_big_bold,
-            corner_radius=10,
+            corner_radius=8,
             command=self.start_system,
         )
-        self.btn_start.pack(side="left", padx=10)
+        self.btn_start.pack(side="left", padx=8)
 
         self.btn_stop = ctk.CTkButton(
             btn_container,
             text="STOP SYSTEM",
             fg_color="#d32f2f",
             hover_color="#b71c1c",
-            height=50,
-            width=200,
+            height=40,
+            width=160,
             font=self.font_big_bold,
-            corner_radius=10,
+            corner_radius=8,
             command=self.stop_system,
             state="disabled",
         )
-        self.btn_stop.pack(side="left", padx=10)
+        self.btn_stop.pack(side="left", padx=8)
 
     def _build_monitor(self):
-        # Monitor section dengan footer styling
         outer = ctk.CTkFrame(
             self, 
             fg_color="#f0f0f0",
             corner_radius=0,
-            height=200,
+            height=180,
         )
         outer.pack(fill="both", expand=True, side="bottom")
         outer.pack_propagate(False)
 
         content = ctk.CTkFrame(outer, fg_color="transparent")
-        content.pack(fill="both", expand=True, padx=50, pady=20)
+        content.pack(fill="both", expand=True, padx=30, pady=10)
 
         # Header dengan title dan connection controls
         header = ctk.CTkFrame(content, fg_color="transparent")
-        header.pack(fill="x", pady=(0, 10))
+        header.pack(fill="x", pady=(0, 6))
 
         title = ctk.CTkLabel(
             header,
@@ -336,69 +332,65 @@ class App(ctk.CTk):
 
         ctk.CTkLabel(
             port_frame,
-            text="Arduino Port:",
+            text="Port:",
             font=self.font_med,
             text_color=TEXT_PRIMARY,
-        ).pack(side="left", padx=(0, 8))
+        ).pack(side="left", padx=(0, 5))
 
-        # Dropdown untuk pilih port
         self.port_var = ctk.StringVar(value="Auto Detect")
         self.port_dropdown = ctk.CTkOptionMenu(
             port_frame,
             variable=self.port_var,
             values=["Auto Detect"],
-            width=150,
-            height=35,
-            font=ctk.CTkFont("Segoe UI", 12),
+            width=120,
+            height=28,
+            font=ctk.CTkFont("Segoe UI", 11),
             fg_color=BCA_BLUE,
             button_color=BCA_DARK_BLUE,
             button_hover_color=BCA_BLUE,
         )
-        self.port_dropdown.pack(side="left", padx=5)
+        self.port_dropdown.pack(side="left", padx=3)
 
-        # Refresh button
         btn_refresh = ctk.CTkButton(
             port_frame,
             text="🔄",
-            width=40,
-            height=35,
-            font=ctk.CTkFont(size=16),
+            width=32,
+            height=28,
+            font=ctk.CTkFont(size=14),
             fg_color="#757575",
             hover_color="#616161",
             command=self._refresh_ports,
         )
-        btn_refresh.pack(side="left", padx=5)
+        btn_refresh.pack(side="left", padx=3)
 
-        # Connect button
         self.btn_connect = ctk.CTkButton(
             port_frame,
             text="Connect",
-            width=100,
-            height=35,
-            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            width=80,
+            height=28,
+            font=ctk.CTkFont("Segoe UI", 11, "bold"),
             fg_color="#4caf50",
             hover_color="#388e3c",
             command=self._manual_connect,
         )
-        self.btn_connect.pack(side="left", padx=5)
+        self.btn_connect.pack(side="left", padx=3)
 
-        # Disconnect button
         self.btn_disconnect = ctk.CTkButton(
             port_frame,
             text="Disconnect",
-            width=100,
-            height=35,
-            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            width=80,
+            height=28,
+            font=ctk.CTkFont("Segoe UI", 11, "bold"),
             fg_color="#ff4444",
             hover_color="#cc0000",
             command=self._disconnect_arduino,
             state="disabled",
         )
-        self.btn_disconnect.pack(side="left", padx=5)
+        self.btn_disconnect.pack(side="left", padx=3)
 
-        # Tambahkan manual test buttons
+        # Manual test buttons
         test_frame = ctk.CTkFrame(content, fg_color="transparent")
-        test_frame.pack(fill="x", pady=(0, 10))
+        test_frame.pack(fill="x", pady=(0, 6))
 
         test_label = ctk.CTkLabel(
             test_frame,
@@ -406,61 +398,60 @@ class App(ctk.CTk):
             font=self.font_med,
             text_color=TEXT_PRIMARY,
         )
-        test_label.pack(side="left", padx=(0, 10))
+        test_label.pack(side="left", padx=(0, 8))
 
         btn_test_pass = ctk.CTkButton(
             test_frame,
             text="Test PASS (BCA0)",
             fg_color="#4caf50",
             hover_color="#388e3c",
-            height=35,
-            width=140,
-            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            height=28,
+            width=115,
+            font=ctk.CTkFont("Segoe UI", 11, "bold"),
             command=lambda: self._send_cmd("test_pass"),
         )
-        btn_test_pass.pack(side="left", padx=5)
+        btn_test_pass.pack(side="left", padx=3)
 
         btn_test_fail = ctk.CTkButton(
             test_frame,
             text="Test FAIL (BCAK)",
             fg_color="#ff4444",
             hover_color="#cc0000",
-            height=35,
-            width=140,
-            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            height=28,
+            width=115,
+            font=ctk.CTkFont("Segoe UI", 11, "bold"),
             command=lambda: self._send_cmd("test_fail"),
         )
-        btn_test_fail.pack(side="left", padx=5)
+        btn_test_fail.pack(side="left", padx=3)
 
         btn_status = ctk.CTkButton(
             test_frame,
             text="Get Status",
             fg_color="#2196f3",
             hover_color="#1976d2",
-            height=35,
-            width=120,
-            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            height=28,
+            width=100,
+            font=ctk.CTkFont("Segoe UI", 11, "bold"),
             command=lambda: self._send_cmd("status"),
         )
-        btn_status.pack(side="left", padx=5)
+        btn_status.pack(side="left", padx=3)
 
-        # Log box
+        # Log box - reduced height
         self.log_box = ctk.CTkTextbox(
             content,
-            height=80,
-            font=("Consolas", 10),
+            height=60,
+            font=("Consolas", 9),
             fg_color="#ffffff",
             text_color="#333333",
             border_width=2,
             border_color="#cccccc",
-            corner_radius=8,
+            corner_radius=6,
         )
         self.log_box.pack(fill="both", expand=True)
 
     # ================== SERIAL ==================
 
     def _refresh_ports(self):
-        """Refresh daftar port COM yang tersedia"""
         ports = serial.tools.list_ports.comports()
         port_list = ["Auto Detect"]
         
@@ -471,18 +462,15 @@ class App(ctk.CTk):
         self._log(f"🔄 Found {len(port_list)-1} COM ports")
 
     def _manual_connect(self):
-        """Connect ke Arduino secara manual"""
         selected = self.port_var.get()
         
         if selected == "Auto Detect":
             self._connect_arduino()
         else:
-            # Extract port name (COM3, COM4, etc)
-            port_name = "COM 5"
+            port_name = selected.split(" - ")[0]
             self._connect_to_port(port_name)
 
     def _connect_to_port(self, port_name):
-        """Connect ke port spesifik"""
         try:
             if self.arduino and self.arduino.is_open:
                 self.arduino.close()
@@ -507,7 +495,6 @@ class App(ctk.CTk):
             self.arduino = None
 
     def _disconnect_arduino(self):
-        """Disconnect Arduino"""
         if self.arduino and self.arduino.is_open:
             self._send_cmd("reset")
             time.sleep(0.5)
@@ -525,7 +512,6 @@ class App(ctk.CTk):
         self._log("=" * 50)
 
     def _connect_arduino(self):
-        """Auto detect dan connect ke Arduino"""
         ports = serial.tools.list_ports.comports()
         for p in ports:
             if "Arduino" in p.description or "USB-SERIAL" in p.description or "USB Serial" in p.description or "CH340" in p.description:
@@ -552,11 +538,9 @@ class App(ctk.CTk):
                 break
 
     def _handle_serial_line(self, line: str):
-        # Log raw data dari Arduino
         if not line.strip():
             return
 
-        # Parsing responses dari Arduino
         if line.startswith("SCAN1_OK:"):
             item_id = line.split(":")[-1]
             self._log(f"✓ Arduino: Scanner 1 OK (ID: {item_id})")
@@ -591,7 +575,6 @@ class App(ctk.CTk):
             item_id = line.split(":")[-1]
             self._log(f"✓ Proses selesai untuk ID: {item_id}")
             self._log("=" * 50)
-            # Reset current item ID
             self.current_item_id = None
             
         elif line.startswith("SCAN_STATE:"):
@@ -604,47 +587,39 @@ class App(ctk.CTk):
             self.current_item_id = None
             
         elif line.startswith("DATA:"):
-            # Data lengkap dari 3 scanner
             self._log(f"📦 {line}")
             
         elif line.startswith("STATUS |"):
-            # Status periodik dari Arduino
             self._log_raw(line)
             
         elif "RELAY" in line and ("ON" in line or "OFF" in line):
             self._log(f"⚡ {line}")
             
         elif line.startswith(">>>"):
-            # Instruksi dari Arduino
             self._log(line)
             
         elif "====" in line or "---" in line:
-            # Separator lines
             self._log_raw(line)
             
         else:
-            # Log lainnya
             self._log_raw(line)
 
     def _show_result_notification(self, result: str, is_pass: bool):
-        """Tampilkan notifikasi hasil validasi"""
-        # Bisa dikembangkan lebih lanjut dengan popup atau visual feedback
         if is_pass:
-            self.scanner1.configure(border_color="#4caf50")  # Green
+            self.scanner1.configure(border_color="#4caf50")
             self.after(2000, lambda: self.scanner1.configure(border_color=ENTRY_BORDER))
         else:
-            self.scanner1.configure(border_color="#ff4444")  # Red
+            self.scanner1.configure(border_color="#ff4444")
             self.after(2000, lambda: self.scanner1.configure(border_color=ENTRY_BORDER))
 
     def _send_cmd(self, cmd: str):
-            if self.arduino and self.arduino.is_open:
-                full_cmd = cmd + "\n"
-                bytes_sent = self.arduino.write(full_cmd.encode("utf-8"))
-                self._log(f">> SENT: '{cmd}' ({bytes_sent} bytes)")
-                self.arduino.flush()  # ⭐ TAMBAHKAN INI - Force kirim data
-            else:
-                self._log("❌ Arduino belum terhubung")
-
+        if self.arduino and self.arduino.is_open:
+            full_cmd = cmd + "\n"
+            bytes_sent = self.arduino.write(full_cmd.encode("utf-8"))
+            self._log(f">> SENT: '{cmd}' ({bytes_sent} bytes)")
+            self.arduino.flush()
+        else:
+            self._log("❌ Arduino belum terhubung")
 
     def _start_status_loop(self):
         if self.arduino and self.arduino.is_open:
@@ -673,14 +648,13 @@ class App(ctk.CTk):
         self.btn_start.configure(state="disabled")
         self.btn_stop.configure(state="normal")
         
-        # Update system status indicator
         self.system_status_indicator.configure(text_color="#4caf50")
         self.system_status_label.configure(text="RUNNING")
         self._send_cmd("start")
         self._log("=" * 50)
         self._log("🚀 SYSTEM STARTED - Siap menerima barcode")
         self._log("=" * 50)
-        # Bersihkan semua scanner
+        
         self.scanner1.clear()
         self.scanner2.clear()
         self.scanner3.clear()
@@ -691,7 +665,6 @@ class App(ctk.CTk):
         self.btn_start.configure(state="normal")
         self.btn_stop.configure(state="disabled")
         
-        # Update system status indicator
         self.system_status_indicator.configure(text_color="#ff4444")
         self.system_status_label.configure(text="STOPPED")
         self._send_cmd("stop")
@@ -736,7 +709,6 @@ class App(ctk.CTk):
             return "scanner3"
         return "unknown"
 
-
     def _process_buffer(self):
         code = self.buffer.strip()
         if not code:
@@ -746,15 +718,13 @@ class App(ctk.CTk):
 
         if scanner == "scanner1":
             self.scanner1.set_value(code)
-            # Format: SCAN1:ITEMID:DATA
-            self.current_item_id = int(time.time() * 1000) % 100000  # Generate unique ID
+            self.current_item_id = int(time.time() * 1000) % 100000
             self._send_cmd(f"SCAN1:{self.current_item_id}:{code}")
             self._log(f"✓ Scanner 1: {code} (ID: {self.current_item_id})")
         elif scanner == "scanner2":
             self.scanner2.set_value(code)
             if self.current_item_id:
                 self._send_cmd(f"SCAN2:{self.current_item_id}:{code}")
-                print(code)
                 self._log(f"✓ Scanner 2: {code}")
             else:
                 self._log("⚠ Scanner 2: Scan Scanner 1 terlebih dahulu!")
