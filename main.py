@@ -70,7 +70,7 @@ class ScannerCard(ctk.CTkFrame):
         )
         self.delete_btn.pack(side="right")
 
-        # ENTRY FIELD
+        # ENTRY FIELD (READONLY)
         self.entry = ctk.CTkEntry(
             self,
             height=40,
@@ -82,15 +82,22 @@ class ScannerCard(ctk.CTkFrame):
             text_color=TEXT_PRIMARY,
             placeholder_text="",
             justify="left",
+            state="readonly",  # READONLY - user tidak bisa edit manual
         )
         self.entry.pack(fill="x", padx=12, pady=(0, 10))
 
     def set_value(self, text: str):
+        # Temporarily enable untuk update value
+        self.entry.configure(state="normal")
         self.entry.delete(0, "end")
         self.entry.insert(0, text)
+        self.entry.configure(state="readonly")  # Back to readonly
 
     def clear(self):
+        # Temporarily enable untuk clear
+        self.entry.configure(state="normal")
         self.entry.delete(0, "end")
+        self.entry.configure(state="readonly")  # Back to readonly
 
 
 class App(ctk.CTk):
@@ -99,12 +106,15 @@ class App(ctk.CTk):
 
         # ---------- ROOT CONFIG ----------
         self.title("Envelope Sorting System")
-        self.geometry("1024x600")
-        self.minsize(1024, 600)
-
-        # fullscreen
+        
+        # FULLSCREEN KIOSK MODE
         self.attributes('-fullscreen', True)
-        self.overrideredirect(True)
+        self.overrideredirect(True)  # Remove window decorations (title bar, close button)
+        
+        # Get screen dimensions
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        self.geometry(f"{screen_width}x{screen_height}+0+0")
 
         # fonts - reduced sizes
         self.font_big_bold = ctk.CTkFont("Segoe UI", 16, "bold")
@@ -121,6 +131,11 @@ class App(ctk.CTk):
         self.buffer = ""
         self.flush_job = None
 
+        # ---------- EXIT BUTTON (Hidden - ESC key) ----------
+        # Press ESC to exit fullscreen
+        self.bind("<Escape>", self.exit_fullscreen)
+        
+        # Hidden exit button (Ctrl+Q)
         self.bind("<Control-q>", lambda e: self.on_close())
 
         # ---------- HEADER ----------
@@ -141,6 +156,16 @@ class App(ctk.CTk):
         # keybinding scanner
         self.bind_all("<Key>", self.on_key)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def exit_fullscreen(self, event=None):
+        """Toggle fullscreen mode with ESC key"""
+        if self.attributes('-fullscreen'):
+            self.attributes('-fullscreen', False)
+            self.overrideredirect(False)
+            self.geometry("1024x600")
+        else:
+            self.attributes('-fullscreen', True)
+            self.overrideredirect(True)
 
     # ================== UI BUILD ==================
 
