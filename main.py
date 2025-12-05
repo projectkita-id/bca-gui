@@ -102,6 +102,10 @@ class App(ctk.CTk):
         self.geometry("1024x600")
         self.minsize(1024, 600)
 
+        # fullscreen
+        self.attributes('-fullscreen', True)
+        self.overrideredirect(True)
+
         # fonts - reduced sizes
         self.font_big_bold = ctk.CTkFont("Segoe UI", 16, "bold")
         self.font_med = ctk.CTkFont("Segoe UI", 12)
@@ -116,6 +120,8 @@ class App(ctk.CTk):
         # buffer scanner
         self.buffer = ""
         self.flush_job = None
+
+        self.bind("<Control-q>", lambda e: self.on_close())
 
         # ---------- HEADER ----------
         self._build_header()
