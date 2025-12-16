@@ -38,24 +38,28 @@ class SettingsDialog(ctk.CTkToplevel):
         self.geometry("500x250")
         self.resizable(False, False)
         
-        # PENTING: Paksa dialog muncul di atas
-        self.attributes('-topmost', True)
-        self.lift()
-        self.focus_force()
-        
         # Make modal
         self.transient(parent)
         
-        # Center window
+        # Center window BEFORE showing
         self.update_idletasks()
         x = (self.winfo_screenwidth() // 2) - (500 // 2)
         y = (self.winfo_screenheight() // 2) - (250 // 2)
         self.geometry(f"500x250+{x}+{y}")
         
-        # Wait until window is visible before grab_set
-        self.wait_visibility()
-        self.grab_set()
+        # PENTING: Urutan yang benar untuk Raspberry Pi
+        self.update()  # Force window creation
+        self.deiconify()  # Make sure it's visible
+        self.attributes('-topmost', True)
+        self.lift()
+        self.focus_force()
         
+        # Wait until window is fully visible before grab_set
+        self.after(10, self._finish_init)
+        
+    def _finish_init(self):
+        """Finish initialization after window is shown"""
+        self.grab_set()
         self._build_ui()
         
     def _build_ui(self):
@@ -149,12 +153,14 @@ class SettingsDialog(ctk.CTkToplevel):
         self.result = {
             'accept': self.accept_entry.get().strip()
         }
-        self.grab_release()
+        if self.grab_current() == self:
+            self.grab_release()
         self.destroy()
         
     def _cancel(self):
         self.result = None
-        self.grab_release()
+        if self.grab_current() == self:
+            self.grab_release()
         self.destroy()
 
 
@@ -630,19 +636,32 @@ class App(ctk.CTk):
     # ================== SETTINGS ==================
 
     def open_settings(self):
-        """Open settings dialog"""
-        # Temporarily disable fullscreen to allow dialog to appear
+        """Open settings dialog - Raspberry Pi optimized"""
+        # Temporarily disable overrideredirect AND fullscreen
+        was_override = self.overrideredirect()
         was_fullscreen = self.attributes('-fullscreen')
+        
+        if was_override:
+            self.overrideredirect(False)
         if was_fullscreen:
             self.attributes('-fullscreen', False)
         
+        # Force update main window
+        self.update()
+        
+        # Create and show dialog
         dialog = SettingsDialog(self, self.accept_value)
+        
+        # Wait for dialog to close
         self.wait_window(dialog)
         
-        # Restore fullscreen
+        # Restore main window state
+        if was_override:
+            self.overrideredirect(True)
         if was_fullscreen:
             self.attributes('-fullscreen', True)
         
+        # Process result
         if dialog.result:
             self.accept_value = dialog.result['accept']
             self._log("=" * 50)
