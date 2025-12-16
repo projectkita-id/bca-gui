@@ -129,7 +129,7 @@ class App(ctk.CTk):
         self.buffer = ""
         self.flush_job = None
 
-        # *** TAMBAHAN: Tracking scanner status ***
+        # *** TAMBAHAN: Tracking scanner status untuk AUTO PASS FALLBACK ***
         self.scanner1_received = False
         self.scanner2_received = False
         self.scanner3_received = False
@@ -708,7 +708,7 @@ class App(ctk.CTk):
         self.current_item_id = None
         self._reset_scanner_tracking()
 
-    # ================== SCANNER TRACKING ==================
+    # ================== SCANNER TRACKING (AUTO PASS FALLBACK) ==================
 
     def _reset_scanner_tracking(self):
         """Reset tracking status semua scanner"""
@@ -788,3 +788,135 @@ class App(ctk.CTk):
             self._send_cmd("test_pass")
             self._log(f"🟢 Servo akan ke posisi 160° (PASS)")
             self._log("=" * 50)
+
+    # ================== SCANNER INPUT ==================
+
+    def on_key(self, event):
+        ch = event.char
+
+        if event.keysym == "Return":
+            self._process_buffer()
+            self.buffer = ""
+            return
+
+        if ch and ch.isprintable():
+            self.buffer += ch
+            self._schedule_flush(120)
+
+    def _schedule_flush(self, delay_ms: int):
+        if self.flush_job:
+            self.after_cancel(self.flush_job)
+        self.flush_job = self.after(delay_ms, self._process_if_pending)
+
+    def _process_if_pending(self):
+        self.flush_job = None
+        if self.buffer:
+            self._process_buffer()
+            self.buffer = ""
+
+    def _identify_scanner(self, code: str) -> str:
+        """Identifikasi scanner berdasarkan format barcode"""
+        code = code.strip()
+        
+        # Scanner 1: 16 karakter (harus mengandung BCA0 atau BCAK)
+        if len(code) == 16:
+            return "scanner1"
+        
+        # Scanner 2: Lebih dari 16 karakter dan diawali BCA
+        if len(code) > 16 and code.startswith("BCA"):
+            return "scanner2"
+        
+        # Scanner 3: 10 digit angka
+        if len(code) == 10 and code.isdigit():
+            return "scanner3"
+        
+        return "unknown"
+
+    def _process_buffer(self):
+        code = self.buffer.strip()
+        if not code:
+            return
+
+        scanner = self._identify_scanner(code)
+
+        if scanner == "scanner1":
+            # *** Scanner 1 berhasil scan ***
+            self.scanner1_received = True
+            
+            # Cancel timeout karena Scanner 1 sudah dapat
+            if self.scanner1_timeout_job:
+                self.after_cancel(self.scanner1_timeout_job)
+                self.scanner1_timeout_job = None
+            
+            self.scanner1.set_value(code)
+            self.current_item_id = int(time.time() * 1000) % 100000
+            self._send_cmd(f"SCAN1:{self.current_item_id}:{code}")
+            self._log(f"✓ Scanner 1: {code} (ID: {self.current_item_id})")
+            
+            # Deteksi PASS/FAIL untuk info user
+            if "BCA0" in code:
+                self._log(f"🔍 Terdeteksi: LULUS (BCA0) - Servo akan ke 160°")
+                self._send_cmd("test_pass")
+            elif "BCAK" in code:
+                self._log(f"🔍 Terdeteksi: GAGAL (BCAK) - Servo akan ke 120°")
+                self._send_cmd("test_fail")
+            else:
+                self._log(f"⚠ Format tidak mengandung BCA0 atau BCAK")
+                self._send_cmd("test_pass")
+                
+        elif scanner == "scanner2":
+            # *** Scanner 2 berhasil scan ***
+            self.scanner2_received = True
+            self.scanner2.set_value(code)
+            
+            # Start timeout untuk Scanner 1 jika belum ada
+            if not self.scanner1_received and not self.scanner1_timeout_job:
+                self._start_scanner1_timeout()
+            
+            # Generate Item ID jika belum ada (untuk kasus Scanner 1 belum scan)
+            if not self.current_item_id:
+                self.current_item_id = int(time.time() * 1000) % 100000
+            
+            self._send_cmd(f"SCAN2:{self.current_item_id}:{code}")
+            self._log(f"✓ Scanner 2: {code}")
+            
+            # Cek kondisi auto PASS
+            self._check_auto_pass_condition()
+                
+        elif scanner == "scanner3":
+            # *** Scanner 3 berhasil scan ***
+            self.scanner3_received = True
+            self.scanner3.set_value(code)
+            
+            # Start timeout untuk Scanner 1 jika belum ada
+            if not self.scanner1_received and not self.scanner1_timeout_job:
+                self._start_scanner1_timeout()
+            
+            # Generate Item ID jika belum ada (untuk kasus Scanner 1 belum scan)
+            if not self.current_item_id:
+                self.current_item_id = int(time.time() * 1000) % 100000
+            
+            self._send_cmd(f"SCAN3:{self.current_item_id}:{code}")
+            self._log(f"✓ Scanner 3: {code}")
+            
+            # Cek kondisi auto PASS
+            self._check_auto_pass_condition()
+        else:
+            self._log(f"❌ Format tidak dikenali: {code} (Panjang: {len(code)})")
+
+    # ================== CLOSE ==================
+
+    def on_close(self):
+        if self.arduino and self.arduino.is_open:
+            self._send_cmd("reset")
+            time.sleep(0.5)
+            self.arduino.close()
+            self._log("Arduino connection closed.")
+        self.destroy()
+
+
+# ==================== MAIN ====================
+
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()
