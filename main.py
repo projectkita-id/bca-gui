@@ -26,6 +26,127 @@ TEXT_SECONDARY = "#0d3ea8"
 HEADER_BG = "#e8ecff"
 
 
+class SettingsDialog(ctk.CTkToplevel):
+    def __init__(self, parent, current_accept_value):
+        super().__init__(parent)
+        
+        self.accept_value = current_accept_value
+        self.result = None
+        
+        # Window setup
+        self.title("Settings - Accept Value")
+        self.geometry("500x250")
+        self.resizable(False, False)
+        
+        # Make modal
+        self.transient(parent)
+        self.grab_set()
+        
+        # Center window
+        self.update_idletasks()
+        x = (self.winfo_screenwidth() // 2) - (500 // 2)
+        y = (self.winfo_screenheight() // 2) - (250 // 2)
+        self.geometry(f"500x250+{x}+{y}")
+        
+        self._build_ui()
+        
+    def _build_ui(self):
+        # Main container
+        main_frame = ctk.CTkFrame(self, fg_color=BG_MAIN)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Title
+        title = ctk.CTkLabel(
+            main_frame,
+            text="⚙️ Scanner 1 Validation Settings",
+            font=ctk.CTkFont("Segoe UI", 18, "bold"),
+            text_color=BCA_BLUE
+        )
+        title.pack(pady=(0, 15))
+        
+        # Description
+        desc = ctk.CTkLabel(
+            main_frame,
+            text="Set the value that Scanner 1 should match for PASS decision.\nAny other value will be considered as REJECT (FAIL).",
+            font=ctk.CTkFont("Segoe UI", 11),
+            text_color=TEXT_SECONDARY,
+            justify="center"
+        )
+        desc.pack(pady=(0, 20))
+        
+        # Accept Value Section
+        accept_frame = ctk.CTkFrame(main_frame, fg_color=CARD_BG, corner_radius=10)
+        accept_frame.pack(fill="x", pady=(0, 20))
+        
+        accept_label_frame = ctk.CTkFrame(accept_frame, fg_color="transparent")
+        accept_label_frame.pack(fill="x", padx=15, pady=(12, 8))
+        
+        ctk.CTkLabel(
+            accept_label_frame,
+            text="✅ ACCEPT Value (PASS)",
+            font=ctk.CTkFont("Segoe UI", 13, "bold"),
+            text_color="#0f9d58"
+        ).pack(side="left")
+        
+        self.accept_entry = ctk.CTkEntry(
+            accept_frame,
+            height=40,
+            font=ctk.CTkFont("Consolas", 12),
+            fg_color=ENTRY_BG,
+            border_color="#0f9d58",
+            border_width=2
+        )
+        self.accept_entry.pack(fill="x", padx=15, pady=(0, 12))
+        self.accept_entry.insert(0, self.accept_value)
+        
+        # Info label
+        info_label = ctk.CTkLabel(
+            main_frame,
+            text="💡 Other values will automatically trigger FAIL",
+            font=ctk.CTkFont("Segoe UI", 10),
+            text_color="#757575"
+        )
+        info_label.pack(pady=(0, 15))
+        
+        # Buttons
+        btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        btn_frame.pack(fill="x")
+        
+        cancel_btn = ctk.CTkButton(
+            btn_frame,
+            text="Cancel",
+            width=120,
+            height=40,
+            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            fg_color="#757575",
+            hover_color="#616161",
+            command=self._cancel
+        )
+        cancel_btn.pack(side="left", padx=(0, 10))
+        
+        save_btn = ctk.CTkButton(
+            btn_frame,
+            text="Save Settings",
+            width=200,
+            height=40,
+            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            fg_color=BCA_BLUE,
+            hover_color=BCA_DARK_BLUE,
+            command=self._save
+        )
+        save_btn.pack(side="right")
+        
+    def _save(self):
+        self.result = {
+            'accept': self.accept_entry.get().strip()
+        }
+        self.destroy()
+        
+    def _cancel(self):
+        self.result = None
+        self.destroy()
+
+
 class ScannerCard(ctk.CTkFrame):
     def __init__(self, master, title, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
@@ -128,6 +249,9 @@ class App(ctk.CTk):
         # buffer scanner
         self.buffer = ""
         self.flush_job = None
+
+        # *** Settings untuk Accept/Reject Values ***
+        self.accept_value = "BCA0"  # Default accept value - selain ini akan dianggap REJECT
 
         # *** TAMBAHAN: Tracking scanner status untuk AUTO PASS FALLBACK ***
         self.scanner1_received = False
@@ -330,6 +454,20 @@ class App(ctk.CTk):
         )
         self.btn_stop.pack(side="left", padx=8)
 
+        # *** SETTINGS BUTTON ***
+        self.btn_settings = ctk.CTkButton(
+            btn_container,
+            text="⚙️ SETTINGS",
+            fg_color=BCA_BLUE,
+            hover_color=BCA_DARK_BLUE,
+            height=40,
+            width=140,
+            font=self.font_big_bold,
+            corner_radius=8,
+            command=self.open_settings,
+        )
+        self.btn_settings.pack(side="left", padx=8)
+
     def _build_monitor(self):
         outer = ctk.CTkFrame(
             self, 
@@ -478,6 +616,21 @@ class App(ctk.CTk):
         )
         self.log_box.pack(fill="both", expand=True)
 
+    # ================== SETTINGS ==================
+
+    def open_settings(self):
+        """Open settings dialog"""
+        dialog = SettingsDialog(self, self.accept_value)
+        self.wait_window(dialog)
+        
+        if dialog.result:
+            self.accept_value = dialog.result['accept']
+            self._log("=" * 50)
+            self._log("⚙️ SETTINGS UPDATED")
+            self._log(f"✅ Accept Value: {self.accept_value}")
+            self._log(f"❌ Reject: Any other value")
+            self._log("=" * 50)
+
     # ================== SERIAL ==================
 
     def _refresh_ports(self):
@@ -584,12 +737,12 @@ class App(ctk.CTk):
             
         elif line.startswith("RESULT:PASS:"):
             item_id = line.split(":")[-1]
-            self._log(f"🟢 HASIL: BENAR (BCA0 terdeteksi) - ID: {item_id}")
+            self._log(f"🟢 HASIL: BENAR (Mengandung {self.accept_value}) - ID: {item_id}")
             self._show_result_notification("BENAR", True)
             
         elif line.startswith("RESULT:FAIL:"):
             item_id = line.split(":")[-1]
-            self._log(f"🔴 HASIL: SALAH (BCAK terdeteksi) - ID: {item_id}")
+            self._log(f"🔴 HASIL: SALAH (Tidak mengandung {self.accept_value}) - ID: {item_id}")
             self._show_result_notification("SALAH", False)
             
         elif line.startswith("RESULT:UNKNOWN:"):
@@ -685,6 +838,8 @@ class App(ctk.CTk):
         self._send_cmd("start")
         self._log("=" * 50)
         self._log("🚀 SYSTEM STARTED - Siap menerima barcode")
+        self._log(f"✅ Accept Value: {self.accept_value}")
+        self._log(f"❌ Reject: Any other value")
         self._log("=" * 50)
         
         self.scanner1.clear()
@@ -745,7 +900,7 @@ class App(ctk.CTk):
             # Cek apakah Scanner 2 dan 3 sudah dapat input
             if self.scanner2_received and self.scanner3_received:
                 self._log("✓ Scanner 2 & 3 terdeteksi")
-                self._log("🔄 AUTO FALLBACK: Dianggap sebagai BCA0 (PASS)")
+                self._log(f"🔄 AUTO FALLBACK: Dianggap sebagai {self.accept_value} (PASS)")
                 
                 # Set Scanner 1 dengan placeholder
                 self.scanner1.set_value("[AUTO PASS - NO SCAN]")
@@ -755,7 +910,6 @@ class App(ctk.CTk):
                     self.current_item_id = int(time.time() * 1000) % 100000
                 
                 # Kirim command PASS ke Arduino
-                # time.sleep(2)
                 self._send_cmd("test_pass")
                 self._log(f"🟢 Servo akan ke posisi 160° (PASS)")
                 self._log("=" * 50)
@@ -776,7 +930,7 @@ class App(ctk.CTk):
             self._log("=" * 50)
             self._log("⚠ SCANNER 1 BELUM SCAN")
             self._log("✓ Scanner 2 & 3 sudah terdeteksi")
-            self._log("🔄 AUTO FALLBACK: Dianggap sebagai BCA0 (PASS)")
+            self._log(f"🔄 AUTO FALLBACK: Dianggap sebagai {self.accept_value} (PASS)")
             
             # Set Scanner 1 dengan placeholder
             self.scanner1.set_value("[AUTO PASS - NO SCAN]")
@@ -786,7 +940,6 @@ class App(ctk.CTk):
                 self.current_item_id = int(time.time() * 1000) % 100000
             
             # Kirim command PASS ke Arduino
-            # time.sleep(2)
             self._send_cmd("test_pass")
             self._log(f"🟢 Servo akan ke posisi 160° (PASS)")
             self._log("=" * 50)
@@ -820,7 +973,7 @@ class App(ctk.CTk):
         """Identifikasi scanner berdasarkan format barcode"""
         code = code.strip()
         
-        # Scanner 1: 16 karakter (harus mengandung BCA0 atau BCAK)
+        # Scanner 1: 16 karakter (harus mengandung accept_value atau reject_value)
         if len(code) == 16:
             return "scanner1"
         
@@ -855,19 +1008,14 @@ class App(ctk.CTk):
             self._send_cmd(f"SCAN1:{self.current_item_id}:{code}")
             self._log(f"✓ Scanner 1: {code} (ID: {self.current_item_id})")
             
-            # Deteksi PASS/FAIL untuk info user
-            if "BCA0" in code:
-                self._log(f"🔍 Terdeteksi: LULUS (BCA0) - Servo akan ke 160°")
-                # time.sleep(2)
+            # *** DETEKSI BERDASARKAN SETTINGS VALUE ***
+            if self.accept_value in code:
+                self._log(f"🔍 Terdeteksi: LULUS (Mengandung {self.accept_value}) - Servo akan ke 160°")
                 self._send_cmd("test_pass")
-            elif "BCAK" in code:
-                self._log(f"🔍 Terdeteksi: GAGAL (BCAK) - Servo akan ke 120°")
+            else:
+                self._log(f"🔍 Terdeteksi: GAGAL (Tidak mengandung {self.accept_value}) - Servo akan ke 120°")
                 time.sleep(3)
                 self._send_cmd("test_fail")
-            else:
-                self._log(f"⚠ Format tidak mengandung BCA0 atau BCAK")
-                # time.sleep(2)
-                self._send_cmd("test_pass")
                 
         elif scanner == "scanner2":
             # *** Scanner 2 berhasil scan ***
