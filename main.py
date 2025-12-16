@@ -82,22 +82,20 @@ class ScannerCard(ctk.CTkFrame):
             text_color=TEXT_PRIMARY,
             placeholder_text="",
             justify="left",
-            state="readonly",  # READONLY - user tidak bisa edit manual
+            state="readonly",
         )
         self.entry.pack(fill="x", padx=12, pady=(0, 10))
 
     def set_value(self, text: str):
-        # Temporarily enable untuk update value
         self.entry.configure(state="normal")
         self.entry.delete(0, "end")
         self.entry.insert(0, text)
-        self.entry.configure(state="readonly")  # Back to readonly
+        self.entry.configure(state="readonly")
 
     def clear(self):
-        # Temporarily enable untuk clear
         self.entry.configure(state="normal")
         self.entry.delete(0, "end")
-        self.entry.configure(state="readonly")  # Back to readonly
+        self.entry.configure(state="readonly")
 
 
 class App(ctk.CTk):
@@ -109,14 +107,14 @@ class App(ctk.CTk):
         
         # FULLSCREEN KIOSK MODE
         self.attributes('-fullscreen', True)
-        self.overrideredirect(True)  # Remove window decorations (title bar, close button)
+        self.overrideredirect(True)
         
         # Get screen dimensions
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         self.geometry(f"{screen_width}x{screen_height}+0+0")
 
-        # fonts - reduced sizes
+        # fonts
         self.font_big_bold = ctk.CTkFont("Segoe UI", 16, "bold")
         self.font_med = ctk.CTkFont("Segoe UI", 12)
         self.font_med_bold = ctk.CTkFont("Segoe UI", 12, "bold")
@@ -131,20 +129,20 @@ class App(ctk.CTk):
         self.buffer = ""
         self.flush_job = None
 
-        # ---------- EXIT BUTTON (Hidden - ESC key) ----------
-        # Press ESC to exit fullscreen
+        # *** TAMBAHAN: Tracking scanner status ***
+        self.scanner1_received = False
+        self.scanner2_received = False
+        self.scanner3_received = False
+        self.scanner1_timeout_job = None
+        self.SCANNER1_TIMEOUT = 5000  # 5 detik timeout
+
+        # ---------- EXIT BUTTON ----------
         self.bind("<Escape>", self.exit_fullscreen)
-        
-        # Hidden exit button (Ctrl+Q)
         self.bind("<Control-q>", lambda e: self.on_close())
 
-        # ---------- HEADER ----------
+        # ---------- UI BUILD ----------
         self._build_header()
-
-        # ---------- SCANNER AREA ----------
         self._build_scanners()
-
-        # ---------- CONTROL + STATUS ----------
         self._build_control_panel()
         self._build_monitor()
 
@@ -467,7 +465,7 @@ class App(ctk.CTk):
         )
         btn_status.pack(side="left", padx=3)
 
-        # Log box - reduced height
+        # Log box
         self.log_box = ctk.CTkTextbox(
             content,
             height=60,
@@ -629,6 +627,9 @@ class App(ctk.CTk):
         elif line.startswith(">>>"):
             self._log(line)
             
+        elif line.startswith("DEBUG"):
+            self._log(f"🐛 {line}")
+            
         elif "====" in line or "---" in line:
             self._log_raw(line)
             
@@ -690,6 +691,7 @@ class App(ctk.CTk):
         self.scanner2.clear()
         self.scanner3.clear()
         self.current_item_id = None
+        self._reset_scanner_tracking()
 
     def stop_system(self):
         self.system_running = False
@@ -704,84 +706,85 @@ class App(ctk.CTk):
         self._log("=" * 50)
         self._send_cmd("reset")
         self.current_item_id = None
+        self._reset_scanner_tracking()
 
-    # ================== SCANNER INPUT ==================
+    # ================== SCANNER TRACKING ==================
 
-    def on_key(self, event):
-        ch = event.char
+    def _reset_scanner_tracking(self):
+        """Reset tracking status semua scanner"""
+        self.scanner1_received = False
+        self.scanner2_received = False
+        self.scanner3_received = False
+        
+        # Cancel timeout job jika ada
+        if self.scanner1_timeout_job:
+            self.after_cancel(self.scanner1_timeout_job)
+            self.scanner1_timeout_job = None
 
-        if event.keysym == "Return":
-            self._process_buffer()
-            self.buffer = ""
-            return
+    def _start_scanner1_timeout(self):
+        """Mulai timeout counter untuk Scanner 1"""
+        # Cancel timeout sebelumnya jika ada
+        if self.scanner1_timeout_job:
+            self.after_cancel(self.scanner1_timeout_job)
+        
+        # Start timeout baru
+        self.scanner1_timeout_job = self.after(
+            self.SCANNER1_TIMEOUT, 
+            self._handle_scanner1_timeout
+        )
+        self._log(f"⏲ Scanner 1 timeout started ({self.SCANNER1_TIMEOUT/1000}s)")
 
-        if ch and ch.isprintable():
-            self.buffer += ch
-            self._schedule_flush(120)
-
-    def _schedule_flush(self, delay_ms: int):
-        if self.flush_job:
-            self.after_cancel(self.flush_job)
-        self.flush_job = self.after(delay_ms, self._process_if_pending)
-
-    def _process_if_pending(self):
-        self.flush_job = None
-        if self.buffer:
-            self._process_buffer()
-            self.buffer = ""
-
-    def _identify_scanner(self, code: str) -> str:
-        code = code.strip()
-        if len(code) == 16:
-            return "scanner1"
-        if len(code) > 16 and code.startswith("BCA"):
-            return "scanner2"
-        if len(code) == 10 and code.isdigit():
-            return "scanner3"
-        return "unknown"
-
-    def _process_buffer(self):
-        code = self.buffer.strip()
-        if not code:
-            return
-
-        scanner = self._identify_scanner(code)
-
-        if scanner == "scanner1":
-            self.scanner1.set_value(code)
-            self.current_item_id = int(time.time() * 1000) % 100000
-            self._send_cmd(f"SCAN1:{self.current_item_id}:{code}")
-            self._log(f"✓ Scanner 1: {code} (ID: {self.current_item_id})")
-        elif scanner == "scanner2":
-            self.scanner2.set_value(code)
-            if self.current_item_id:
-                self._send_cmd(f"SCAN2:{self.current_item_id}:{code}")
-                self._log(f"✓ Scanner 2: {code}")
+    def _handle_scanner1_timeout(self):
+        """Handle ketika Scanner 1 timeout - auto PASS jika Scanner 2 & 3 sudah dapat"""
+        self.scanner1_timeout_job = None
+        
+        if not self.scanner1_received:
+            self._log("=" * 50)
+            self._log("⚠ SCANNER 1 TIMEOUT!")
+            
+            # Cek apakah Scanner 2 dan 3 sudah dapat input
+            if self.scanner2_received and self.scanner3_received:
+                self._log("✓ Scanner 2 & 3 terdeteksi")
+                self._log("🔄 AUTO FALLBACK: Dianggap sebagai BCA0 (PASS)")
+                
+                # Set Scanner 1 dengan placeholder
+                self.scanner1.set_value("[AUTO PASS - NO SCAN]")
+                
+                # Generate Item ID jika belum ada
+                if not self.current_item_id:
+                    self.current_item_id = int(time.time() * 1000) % 100000
+                
+                # Kirim command PASS ke Arduino
+                self._send_cmd("test_pass")
+                self._log(f"🟢 Servo akan ke posisi 160° (PASS)")
+                self._log("=" * 50)
+                
             else:
-                self._log("⚠ Scanner 2: Scan Scanner 1 terlebih dahulu!")
-        elif scanner == "scanner3":
-            self.scanner3.set_value(code)
-            if self.current_item_id:
-                self._send_cmd(f"SCAN3:{self.current_item_id}:{code}")
-                self._log(f"✓ Scanner 3: {code}")
-            else:
-                self._log("⚠ Scanner 3: Scan Scanner 1 terlebih dahulu!")
-        else:
-            self._log(f"❌ Format tidak dikenali: {code}")
+                self._log("❌ Scanner 2 atau 3 belum lengkap - Menunggu input...")
+                self._log("=" * 50)
 
-    # ================== CLOSE ==================
-
-    def on_close(self):
-        if self.arduino and self.arduino.is_open:
-            self._send_cmd("reset")
-            time.sleep(0.5)
-            self.arduino.close()
-            self._log("Arduino connection closed.")
-        self.destroy()
-
-
-# ==================== MAIN ====================
-
-if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+    def _check_auto_pass_condition(self):
+        """Cek kondisi untuk auto PASS ketika Scanner 2 atau 3 dapat input"""
+        # Jika Scanner 1 belum dapat tapi Scanner 2 dan 3 sudah dapat
+        if not self.scanner1_received and self.scanner2_received and self.scanner3_received:
+            # Cancel timeout karena kondisi sudah terpenuhi
+            if self.scanner1_timeout_job:
+                self.after_cancel(self.scanner1_timeout_job)
+                self.scanner1_timeout_job = None
+            
+            self._log("=" * 50)
+            self._log("⚠ SCANNER 1 BELUM SCAN")
+            self._log("✓ Scanner 2 & 3 sudah terdeteksi")
+            self._log("🔄 AUTO FALLBACK: Dianggap sebagai BCA0 (PASS)")
+            
+            # Set Scanner 1 dengan placeholder
+            self.scanner1.set_value("[AUTO PASS - NO SCAN]")
+            
+            # Generate Item ID jika belum ada
+            if not self.current_item_id:
+                self.current_item_id = int(time.time() * 1000) % 100000
+            
+            # Kirim command PASS ke Arduino
+            self._send_cmd("test_pass")
+            self._log(f"🟢 Servo akan ke posisi 160° (PASS)")
+            self._log("=" * 50)
