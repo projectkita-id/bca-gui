@@ -755,7 +755,8 @@ class App(ctk.CTk):
                     self.current_item_id = int(time.time() * 1000) % 100000
                 
                 # Kirim command PASS ke Arduino
-                self.after(3000, lambda: self._send_cmd("test_pass"))
+                time.sleep(3)
+                self._send_cmd("test_pass")
                 self._log(f"🟢 Servo akan ke posisi 160° (PASS)")
                 self._log("=" * 50)
                 
@@ -785,8 +786,8 @@ class App(ctk.CTk):
                 self.current_item_id = int(time.time() * 1000) % 100000
             
             # Kirim command PASS ke Arduino
-            # self._send_cmd("test_pass")
-            self.after(3000, lambda: self._send_cmd("test_pass"))
+            time.sleep(3)
+            self._send_cmd("test_pass")
             self._log(f"🟢 Servo akan ke posisi 160° (PASS)")
             self._log("=" * 50)
 
@@ -857,16 +858,16 @@ class App(ctk.CTk):
             # Deteksi PASS/FAIL untuk info user
             if "BCA0" in code:
                 self._log(f"🔍 Terdeteksi: LULUS (BCA0) - Servo akan ke 160°")
-                # self._send_cmd("test_pass")
-                self.after(3000, lambda: self._send_cmd("test_pass"))
+                time.sleep(3)
+                self._send_cmd("test_pass")
             elif "BCAK" in code:
                 self._log(f"🔍 Terdeteksi: GAGAL (BCAK) - Servo akan ke 120°")
-                # self._send_cmd("test_fail")
-                self.after(3000, lambda: self._send_cmd("test_fail"))
+                time.sleep(3)
+                self._send_cmd("test_fail")
             else:
                 self._log(f"⚠ Format tidak mengandung BCA0 atau BCAK")
-                # self._send_cmd("test_pass")
-                self.after(3000, lambda: self._send_cmd("test_pass"))
+                time.sleep(3)
+                self._send_cmd("test_pass")
                 
         elif scanner == "scanner2":
             # *** Scanner 2 berhasil scan ***
