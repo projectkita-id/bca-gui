@@ -647,16 +647,15 @@ class App(ctk.CTk):
         if was_override:
             self.overrideredirect(False)
         
-        # Lower main window to background
-        self.lower()
+        # CRITICAL: Withdraw main window completely
+        self.withdraw()
         
-        # Force update before creating dialog
+        # Force update
         self.update_idletasks()
         self.update()
         
-        # Small delay to ensure window manager processes the changes
-        self.after(50)
-        self.update()
+        # Small delay
+        time.sleep(0.1)
         
         # Create and show dialog
         dialog = SettingsDialog(self, self.accept_value)
@@ -664,8 +663,8 @@ class App(ctk.CTk):
         # Wait for dialog to close
         self.wait_window(dialog)
         
-        # Restore main window to front
-        self.lift()
+        # Show main window again
+        self.deiconify()
         
         # Restore main window state
         if was_override:
@@ -674,6 +673,7 @@ class App(ctk.CTk):
             self.attributes('-fullscreen', True)
         
         # Force focus back to main window
+        self.lift()
         self.focus_force()
         
         # Process result
