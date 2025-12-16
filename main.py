@@ -641,12 +641,21 @@ class App(ctk.CTk):
         was_override = self.overrideredirect()
         was_fullscreen = self.attributes('-fullscreen')
         
-        if was_override:
-            self.overrideredirect(False)
+        # IMPORTANT: Disable window locking FIRST
         if was_fullscreen:
             self.attributes('-fullscreen', False)
+        if was_override:
+            self.overrideredirect(False)
         
-        # Force update main window
+        # Lower main window to background
+        self.lower()
+        
+        # Force update before creating dialog
+        self.update_idletasks()
+        self.update()
+        
+        # Small delay to ensure window manager processes the changes
+        self.after(50)
         self.update()
         
         # Create and show dialog
@@ -655,11 +664,17 @@ class App(ctk.CTk):
         # Wait for dialog to close
         self.wait_window(dialog)
         
+        # Restore main window to front
+        self.lift()
+        
         # Restore main window state
         if was_override:
             self.overrideredirect(True)
         if was_fullscreen:
             self.attributes('-fullscreen', True)
+        
+        # Force focus back to main window
+        self.focus_force()
         
         # Process result
         if dialog.result:
