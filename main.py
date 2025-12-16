@@ -862,7 +862,7 @@ class App(ctk.CTk):
                 self._send_cmd("test_pass")
             elif "BCAK" in code:
                 self._log(f"🔍 Terdeteksi: GAGAL (BCAK) - Servo akan ke 120°")
-                time.sleep(2)
+                time.sleep(3)
                 self._send_cmd("test_fail")
             else:
                 self._log(f"⚠ Format tidak mengandung BCA0 atau BCAK")
