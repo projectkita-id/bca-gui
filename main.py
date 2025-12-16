@@ -38,15 +38,23 @@ class SettingsDialog(ctk.CTkToplevel):
         self.geometry("500x250")
         self.resizable(False, False)
         
+        # PENTING: Paksa dialog muncul di atas
+        self.attributes('-topmost', True)
+        self.lift()
+        self.focus_force()
+        
         # Make modal
         self.transient(parent)
-        self.grab_set()
         
         # Center window
         self.update_idletasks()
         x = (self.winfo_screenwidth() // 2) - (500 // 2)
         y = (self.winfo_screenheight() // 2) - (250 // 2)
         self.geometry(f"500x250+{x}+{y}")
+        
+        # Wait until window is visible before grab_set
+        self.wait_visibility()
+        self.grab_set()
         
         self._build_ui()
         
@@ -98,6 +106,7 @@ class SettingsDialog(ctk.CTkToplevel):
         )
         self.accept_entry.pack(fill="x", padx=15, pady=(0, 12))
         self.accept_entry.insert(0, self.accept_value)
+        self.accept_entry.focus()
         
         # Info label
         info_label = ctk.CTkLabel(
@@ -140,10 +149,12 @@ class SettingsDialog(ctk.CTkToplevel):
         self.result = {
             'accept': self.accept_entry.get().strip()
         }
+        self.grab_release()
         self.destroy()
         
     def _cancel(self):
         self.result = None
+        self.grab_release()
         self.destroy()
 
 
@@ -620,8 +631,17 @@ class App(ctk.CTk):
 
     def open_settings(self):
         """Open settings dialog"""
+        # Temporarily disable fullscreen to allow dialog to appear
+        was_fullscreen = self.attributes('-fullscreen')
+        if was_fullscreen:
+            self.attributes('-fullscreen', False)
+        
         dialog = SettingsDialog(self, self.accept_value)
         self.wait_window(dialog)
+        
+        # Restore fullscreen
+        if was_fullscreen:
+            self.attributes('-fullscreen', True)
         
         if dialog.result:
             self.accept_value = dialog.result['accept']
