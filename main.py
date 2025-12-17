@@ -171,7 +171,7 @@ class ScannerCard(ctk.CTkFrame):
         self.configure(
             fg_color=CARD_BG,
             corner_radius=12,
-            border_width=2,
+            border_width=3,
             border_color=BCA_BLUE,
         )
 
@@ -179,16 +179,16 @@ class ScannerCard(ctk.CTkFrame):
         header = ctk.CTkFrame(
             self,
             fg_color="transparent",
-            height=35,
+            height=50,
         )
-        header.pack(fill="x", padx=12, pady=(8, 5))
+        header.pack(fill="x", padx=20, pady=(15, 10))
         header.pack_propagate(False)
 
         # Title
         self.title_label = ctk.CTkLabel(
             header,
             text=title,
-            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=20, weight="bold"),
             text_color=BCA_BLUE,
             anchor="w",
         )
@@ -198,12 +198,12 @@ class ScannerCard(ctk.CTkFrame):
         self.delete_btn = ctk.CTkButton(
             header,
             text="🗑️",
-            width=32,
-            height=32,
-            font=ctk.CTkFont(size=16),
+            width=50,
+            height=50,
+            font=ctk.CTkFont(size=22),
             fg_color="#ff4444",
             hover_color="#cc0000",
-            corner_radius=6,
+            corner_radius=10,
             command=self.clear,
         )
         self.delete_btn.pack(side="right")
@@ -211,18 +211,18 @@ class ScannerCard(ctk.CTkFrame):
         # ENTRY FIELD (READONLY)
         self.entry = ctk.CTkEntry(
             self,
-            height=40,
-            corner_radius=8,
-            font=ctk.CTkFont(family="Consolas", size=13),
+            height=60,
+            corner_radius=10,
+            font=ctk.CTkFont(family="Consolas", size=18, weight="bold"),
             fg_color=ENTRY_BG,
-            border_width=2,
+            border_width=3,
             border_color=ENTRY_BORDER,
             text_color=TEXT_PRIMARY,
             placeholder_text="",
             justify="left",
             state="readonly",
         )
-        self.entry.pack(fill="x", padx=12, pady=(0, 10))
+        self.entry.pack(fill="x", padx=20, pady=(0, 15))
 
     def set_value(self, text: str):
         self.entry.configure(state="normal")
@@ -285,7 +285,6 @@ class App(ctk.CTk):
         self._build_header()
         self._build_scanners()
         self._build_control_panel()
-        self._build_monitor()
 
         # ---------- SERIAL ----------
         self._refresh_ports()
@@ -425,21 +424,20 @@ class App(ctk.CTk):
 
     def _build_scanners(self):
         container = ctk.CTkFrame(self, fg_color="transparent")
-        container.pack(fill="x", padx=30, pady=(0, 8))
+        container.pack(fill="both", expand=True, padx=40, pady=(10, 10))
 
         self.scanner1 = ScannerCard(container, "SCANNER 1")
-        self.scanner1.pack(fill="x", pady=(0, 8))
+        self.scanner1.pack(fill="both", expand=True, pady=(0, 15))
 
         self.scanner2 = ScannerCard(container, "SCANNER 2")
-        self.scanner2.pack(fill="x", pady=(0, 8))
+        self.scanner2.pack(fill="both", expand=True, pady=(0, 15))
 
         self.scanner3 = ScannerCard(container, "SCANNER 3")
-        self.scanner3.pack(fill="x")
+        self.scanner3.pack(fill="both", expand=True)
 
     def _build_control_panel(self):
-        frame = ctk.CTkFrame(self, fg_color="transparent", height=55)
-        frame.pack(fill="x", padx=30, pady=(5, 8))
-        frame.pack_propagate(False)
+        frame = ctk.CTkFrame(self, fg_color="transparent")
+        frame.pack(fill="both", expand=True, padx=30, pady=(20, 30))
 
         btn_container = ctk.CTkFrame(frame, fg_color="transparent")
         btn_container.pack(expand=True)
@@ -449,27 +447,27 @@ class App(ctk.CTk):
             text="START SYSTEM",
             fg_color="#0f9d58",
             hover_color="#0b7c45",
-            height=40,
-            width=160,
-            font=self.font_big_bold,
-            corner_radius=8,
+            height=80,
+            width=300,
+            font=ctk.CTkFont("Segoe UI", 24, "bold"),
+            corner_radius=12,
             command=self.start_system,
         )
-        self.btn_start.pack(side="left", padx=8)
+        self.btn_start.pack(side="left", padx=15)
 
         self.btn_stop = ctk.CTkButton(
             btn_container,
             text="STOP SYSTEM",
             fg_color="#d32f2f",
             hover_color="#b71c1c",
-            height=40,
-            width=160,
-            font=self.font_big_bold,
-            corner_radius=8,
+            height=80,
+            width=300,
+            font=ctk.CTkFont("Segoe UI", 24, "bold"),
+            corner_radius=12,
             command=self.stop_system,
             state="disabled",
         )
-        self.btn_stop.pack(side="left", padx=8)
+        self.btn_stop.pack(side="left", padx=15)
 
         # *** SETTINGS BUTTON ***
         self.btn_settings = ctk.CTkButton(
@@ -477,113 +475,13 @@ class App(ctk.CTk):
             text="⚙️ SETTINGS",
             fg_color=BCA_BLUE,
             hover_color=BCA_DARK_BLUE,
-            height=40,
-            width=140,
-            font=self.font_big_bold,
-            corner_radius=8,
+            height=80,
+            width=280,
+            font=ctk.CTkFont("Segoe UI", 24, "bold"),
+            corner_radius=12,
             command=self.open_settings,
         )
-        self.btn_settings.pack(side="left", padx=8)
-
-    def _build_monitor(self):
-        outer = ctk.CTkFrame(
-            self, 
-            fg_color="#f0f0f0",
-            corner_radius=0,
-            height=180,
-        )
-        outer.pack(fill="both", expand=True, side="bottom")
-        outer.pack_propagate(False)
-
-        content = ctk.CTkFrame(outer, fg_color="transparent")
-        content.pack(fill="both", expand=True, padx=30, pady=10)
-
-        # Header dengan title dan connection controls
-        header = ctk.CTkFrame(content, fg_color="transparent")
-        header.pack(fill="x", pady=(0, 6))
-
-        title = ctk.CTkLabel(
-            header,
-            text="SYSTEM MONITOR",
-            font=self.font_big_bold,
-            text_color=TEXT_PRIMARY,
-        )
-        title.pack(side="left")
-
-        # Arduino port selection
-        port_frame = ctk.CTkFrame(header, fg_color="transparent")
-        port_frame.pack(side="right")
-
-        ctk.CTkLabel(
-            port_frame,
-            text="Port:",
-            font=self.font_med,
-            text_color=TEXT_PRIMARY,
-        ).pack(side="left", padx=(0, 5))
-
-        self.port_var = ctk.StringVar(value="Auto Detect")
-        self.port_dropdown = ctk.CTkOptionMenu(
-            port_frame,
-            variable=self.port_var,
-            values=["Auto Detect"],
-            width=120,
-            height=28,
-            font=ctk.CTkFont("Segoe UI", 11),
-            fg_color=BCA_BLUE,
-            button_color=BCA_DARK_BLUE,
-            button_hover_color=BCA_BLUE,
-        )
-        self.port_dropdown.pack(side="left", padx=3)
-
-        btn_refresh = ctk.CTkButton(
-            port_frame,
-            text="🔄",
-            width=32,
-            height=28,
-            font=ctk.CTkFont(size=14),
-            fg_color="#757575",
-            hover_color="#616161",
-            command=self._refresh_ports,
-        )
-        btn_refresh.pack(side="left", padx=3)
-
-        self.btn_connect = ctk.CTkButton(
-            port_frame,
-            text="Connect",
-            width=80,
-            height=28,
-            font=ctk.CTkFont("Segoe UI", 11, "bold"),
-            fg_color="#4caf50",
-            hover_color="#388e3c",
-            command=self._manual_connect,
-        )
-        self.btn_connect.pack(side="left", padx=3)
-
-        self.btn_disconnect = ctk.CTkButton(
-            port_frame,
-            text="Disconnect",
-            width=80,
-            height=28,
-            font=ctk.CTkFont("Segoe UI", 11, "bold"),
-            fg_color="#ff4444",
-            hover_color="#cc0000",
-            command=self._disconnect_arduino,
-            state="disabled",
-        )
-        self.btn_disconnect.pack(side="left", padx=3)
-
-        # Log box (MANUAL TEST BUTTONS DIHAPUS)
-        self.log_box = ctk.CTkTextbox(
-            content,
-            height=100,
-            font=("Consolas", 9),
-            fg_color="#ffffff",
-            text_color="#333333",
-            border_width=2,
-            border_color="#cccccc",
-            corner_radius=6,
-        )
-        self.log_box.pack(fill="both", expand=True)
+        self.btn_settings.pack(side="left", padx=15)
 
     # ================== SETTINGS ==================
 
@@ -631,32 +529,17 @@ class App(ctk.CTk):
         # Process result
         if dialog.result:
             self.accept_value = dialog.result['accept']
-            self._log("=" * 50)
-            self._log("⚙️ SETTINGS UPDATED")
-            self._log(f"✅ Accept Value: {self.accept_value}")
-            self._log(f"❌ Reject: Any other value")
-            self._log("=" * 50)
+            print("=" * 50)
+            print("⚙️ SETTINGS UPDATED")
+            print(f"✅ Accept Value: {self.accept_value}")
+            print(f"❌ Reject: Any other value")
+            print("=" * 50)
 
     # ================== SERIAL ==================
 
     def _refresh_ports(self):
         ports = serial.tools.list_ports.comports()
-        port_list = ["Auto Detect"]
-        
-        for p in ports:
-            port_list.append(f"{p.device} - {p.description}")
-        
-        self.port_dropdown.configure(values=port_list)
-        self._log(f"🔄 Found {len(port_list)-1} COM ports")
-
-    def _manual_connect(self):
-        selected = self.port_var.get()
-        
-        if selected == "Auto Detect":
-            self._connect_arduino()
-        else:
-            port_name = selected.split(" - ")[0]
-            self._connect_to_port(port_name)
+        print(f"🔄 Found {len(ports)} COM ports")
 
     def _connect_to_port(self, port_name):
         try:
@@ -669,35 +552,15 @@ class App(ctk.CTk):
             self.arduino_status_indicator.configure(text_color="#4caf50")
             self.arduino_port_label.configure(text=port_name)
             
-            self.btn_connect.configure(state="disabled")
-            self.btn_disconnect.configure(state="normal")
-            
-            self._log("=" * 50)
-            self._log(f"✓ Connected to Arduino on {port_name}")
-            self._log("=" * 50)
+            print("=" * 50)
+            print(f"✓ Connected to Arduino on {port_name}")
+            print("=" * 50)
             
             self._start_serial_thread()
             
         except Exception as e:
-            self._log(f"❌ Failed to connect to {port_name}: {e}")
+            print(f"❌ Failed to connect to {port_name}: {e}")
             self.arduino = None
-
-    def _disconnect_arduino(self):
-        if self.arduino and self.arduino.is_open:
-            self._send_cmd("reset")
-            time.sleep(0.5)
-            self.arduino.close()
-            
-        self.arduino = None
-        self.arduino_status_indicator.configure(text_color="#ff4444")
-        self.arduino_port_label.configure(text="Disconnected")
-        
-        self.btn_connect.configure(state="normal")
-        self.btn_disconnect.configure(state="disabled")
-        
-        self._log("=" * 50)
-        self._log("🔌 Arduino disconnected")
-        self._log("=" * 50)
 
     def _connect_arduino(self):
         ports = serial.tools.list_ports.comports()
@@ -706,9 +569,9 @@ class App(ctk.CTk):
                 self._connect_to_port(p.device)
                 return
                 
-        self._log("=" * 50)
-        self._log("⚠ No Arduino found. Select port manually.")
-        self._log("=" * 50)
+        print("=" * 50)
+        print("⚠ No Arduino found. Select port manually.")
+        print("=" * 50)
         self.arduino = None
 
     def _start_serial_thread(self):
@@ -731,69 +594,39 @@ class App(ctk.CTk):
 
         if line.startswith("SCAN1_OK:"):
             item_id = line.split(":")[-1]
-            self._log(f"✓ Arduino: Scanner 1 OK (ID: {item_id})")
+            print(f"✓ Arduino: Scanner 1 OK (ID: {item_id})")
             
         elif line.startswith("SCAN2_OK:"):
             item_id = line.split(":")[-1]
-            self._log(f"✓ Arduino: Scanner 2 OK (ID: {item_id})")
+            print(f"✓ Arduino: Scanner 2 OK (ID: {item_id})")
             
         elif line.startswith("SCAN3_OK:"):
             item_id = line.split(":")[-1]
-            self._log(f"✓ Arduino: Scanner 3 OK (ID: {item_id})")
+            print(f"✓ Arduino: Scanner 3 OK (ID: {item_id})")
             
         elif line.startswith("RESULT:PASS:"):
             item_id = line.split(":")[-1]
-            self._log(f"🟢 HASIL: BENAR (Mengandung {self.accept_value}) - ID: {item_id}")
+            print(f"🟢 HASIL: BENAR (Mengandung {self.accept_value}) - ID: {item_id}")
             self._show_result_notification("BENAR", True)
             
         elif line.startswith("RESULT:FAIL:"):
             item_id = line.split(":")[-1]
-            self._log(f"🔴 HASIL: SALAH (Tidak mengandung {self.accept_value}) - ID: {item_id}")
+            print(f"🔴 HASIL: SALAH (Tidak mengandung {self.accept_value}) - ID: {item_id}")
             self._show_result_notification("SALAH", False)
             
         elif line.startswith("RESULT:UNKNOWN:"):
             item_id = line.split(":")[-1]
-            self._log(f"⚠ HASIL: TIDAK DIKENAL - ID: {item_id}")
+            print(f"⚠ HASIL: TIDAK DIKENAL - ID: {item_id}")
             
         elif line.startswith("SERVO:"):
             angle = line.split(":")[-1]
-            self._log(f"🔧 Servo digerakkan ke: {angle}")
+            print(f"🔧 Servo digerakkan ke: {angle}")
             
         elif line.startswith("COMPLETE:"):
             item_id = line.split(":")[-1]
-            self._log(f"✓ Proses selesai untuk ID: {item_id}")
-            self._log("=" * 50)
+            print(f"✓ Proses selesai untuk ID: {item_id}")
+            print("=" * 50)
             self.current_item_id = None
-            
-        elif line.startswith("SCAN_STATE:"):
-            state = line.split(":", 1)[1]
-            self._log(f"📊 Status: {state}")
-            
-        elif line.startswith("SCAN_TIMEOUT:"):
-            item_id = line.split(":")[-1]
-            self._log(f"⏱ TIMEOUT: Scanner tidak merespons - ID: {item_id}")
-            self.current_item_id = None
-            
-        elif line.startswith("DATA:"):
-            self._log(f"📦 {line}")
-            
-        elif line.startswith("STATUS |"):
-            self._log_raw(line)
-            
-        elif "RELAY" in line and ("ON" in line or "OFF" in line):
-            self._log(f"⚡ {line}")
-            
-        elif line.startswith(">>>"):
-            self._log(line)
-            
-        elif line.startswith("DEBUG"):
-            self._log(f"🐛 {line}")
-            
-        elif "====" in line or "---" in line:
-            self._log_raw(line)
-            
-        else:
-            self._log_raw(line)
 
     def _show_result_notification(self, result: str, is_pass: bool):
         if is_pass:
@@ -807,32 +640,21 @@ class App(ctk.CTk):
         if self.arduino and self.arduino.is_open:
             full_cmd = cmd + "\n"
             bytes_sent = self.arduino.write(full_cmd.encode("utf-8"))
-            self._log(f">> SENT: '{cmd}' ({bytes_sent} bytes)")
+            print(f">> SENT: '{cmd}' ({bytes_sent} bytes)")
             self.arduino.flush()
         else:
-            self._log("❌ Arduino belum terhubung")
+            print("❌ Arduino belum terhubung")
 
     def _start_status_loop(self):
         if self.arduino and self.arduino.is_open:
             self._send_cmd("status")
         self.after(3000, self._start_status_loop)
 
-    # ================== LOG UTILS ==================
-
-    def _log(self, msg: str):
-        ts = datetime.now().strftime("%H:%M:%S")
-        self.log_box.insert("end", f"[{ts}] {msg}\n")
-        self.log_box.see("end")
-
-    def _log_raw(self, msg: str):
-        self.log_box.insert("end", msg + "\n")
-        self.log_box.see("end")
-
     # ================== START / STOP ==================
 
     def start_system(self):
         if not self.arduino or not self.arduino.is_open:
-            self._log("❌ Tidak bisa START: Arduino belum terhubung!")
+            print("❌ Tidak bisa START: Arduino belum terhubung!")
             return
             
         self.system_running = True
@@ -842,11 +664,11 @@ class App(ctk.CTk):
         self.system_status_indicator.configure(text_color="#4caf50")
         self.system_status_label.configure(text="RUNNING")
         self._send_cmd("start")
-        self._log("=" * 50)
-        self._log("🚀 SYSTEM STARTED - Siap menerima barcode")
-        self._log(f"✅ Accept Value: {self.accept_value}")
-        self._log(f"❌ Reject: Any other value")
-        self._log("=" * 50)
+        print("=" * 50)
+        print("🚀 SYSTEM STARTED - Siap menerima barcode")
+        print(f"✅ Accept Value: {self.accept_value}")
+        print(f"❌ Reject: Any other value")
+        print("=" * 50)
         
         self.scanner1.clear()
         self.scanner2.clear()
@@ -862,9 +684,9 @@ class App(ctk.CTk):
         self.system_status_indicator.configure(text_color="#ff4444")
         self.system_status_label.configure(text="STOPPED")
         self._send_cmd("stop")
-        self._log("=" * 50)
-        self._log("⏸ SYSTEM STOPPED")
-        self._log("=" * 50)
+        print("=" * 50)
+        print("⏸ SYSTEM STOPPED")
+        print("=" * 50)
         self._send_cmd("reset")
         self.current_item_id = None
         self._reset_scanner_tracking()
@@ -893,20 +715,20 @@ class App(ctk.CTk):
             self.SCANNER1_TIMEOUT, 
             self._handle_scanner1_timeout
         )
-        self._log(f"⏲ Scanner 1 timeout started ({self.SCANNER1_TIMEOUT/1000}s)")
+        print(f"⏲ Scanner 1 timeout started ({self.SCANNER1_TIMEOUT/1000}s)")
 
     def _handle_scanner1_timeout(self):
         """Handle ketika Scanner 1 timeout - auto PASS jika Scanner 2 & 3 sudah dapat"""
         self.scanner1_timeout_job = None
         
         if not self.scanner1_received:
-            self._log("=" * 50)
-            self._log("⚠ SCANNER 1 TIMEOUT!")
+            print("=" * 50)
+            print("⚠ SCANNER 1 TIMEOUT!")
             
             # Cek apakah Scanner 2 dan 3 sudah dapat input
             if self.scanner2_received and self.scanner3_received:
-                self._log("✓ Scanner 2 & 3 terdeteksi")
-                self._log(f"🔄 AUTO FALLBACK: Dianggap sebagai {self.accept_value} (PASS)")
+                print("✓ Scanner 2 & 3 terdeteksi")
+                print(f"🔄 AUTO FALLBACK: Dianggap sebagai {self.accept_value} (PASS)")
                 
                 # Set Scanner 1 dengan placeholder
                 self.scanner1.set_value("[AUTO PASS - NO SCAN]")
@@ -917,12 +739,12 @@ class App(ctk.CTk):
                 
                 # Kirim command PASS ke Arduino
                 self._send_cmd("test_pass")
-                self._log(f"🟢 Servo akan ke posisi 160° (PASS)")
-                self._log("=" * 50)
+                print(f"🟢 Servo akan ke posisi 160° (PASS)")
+                print("=" * 50)
                 
             else:
-                self._log("❌ Scanner 2 atau 3 belum lengkap - Menunggu input...")
-                self._log("=" * 50)
+                print("❌ Scanner 2 atau 3 belum lengkap - Menunggu input...")
+                print("=" * 50)
 
     def _check_auto_pass_condition(self):
         """Cek kondisi untuk auto PASS ketika Scanner 2 atau 3 dapat input"""
@@ -933,10 +755,10 @@ class App(ctk.CTk):
                 self.after_cancel(self.scanner1_timeout_job)
                 self.scanner1_timeout_job = None
             
-            self._log("=" * 50)
-            self._log("⚠ SCANNER 1 BELUM SCAN")
-            self._log("✓ Scanner 2 & 3 sudah terdeteksi")
-            self._log(f"🔄 AUTO FALLBACK: Dianggap sebagai {self.accept_value} (PASS)")
+            print("=" * 50)
+            print("⚠ SCANNER 1 BELUM SCAN")
+            print("✓ Scanner 2 & 3 sudah terdeteksi")
+            print(f"🔄 AUTO FALLBACK: Dianggap sebagai {self.accept_value} (PASS)")
             
             # Set Scanner 1 dengan placeholder
             self.scanner1.set_value("[AUTO PASS - NO SCAN]")
@@ -947,8 +769,8 @@ class App(ctk.CTk):
             
             # Kirim command PASS ke Arduino
             self._send_cmd("test_pass")
-            self._log(f"🟢 Servo akan ke posisi 160° (PASS)")
-            self._log("=" * 50)
+            print(f"🟢 Servo akan ke posisi 160° (PASS)")
+            print("=" * 50)
 
     # ================== SCANNER INPUT ==================
 
@@ -1012,14 +834,14 @@ class App(ctk.CTk):
             self.scanner1.set_value(code)
             self.current_item_id = int(time.time() * 1000) % 100000
             self._send_cmd(f"SCAN1:{self.current_item_id}:{code}")
-            self._log(f"✓ Scanner 1: {code} (ID: {self.current_item_id})")
+            print(f"✓ Scanner 1: {code} (ID: {self.current_item_id})")
             
             # *** DETEKSI BERDASARKAN SETTINGS VALUE ***
             if self.accept_value in code:
-                self._log(f"🔍 Terdeteksi: LULUS (Mengandung {self.accept_value}) - Servo akan ke 160°")
+                print(f"🔍 Terdeteksi: LULUS (Mengandung {self.accept_value}) - Servo akan ke 160°")
                 self._send_cmd("test_pass")
             else:
-                self._log(f"🔍 Terdeteksi: GAGAL (Tidak mengandung {self.accept_value}) - Servo akan ke 120°")
+                print(f"🔍 Terdeteksi: GAGAL (Tidak mengandung {self.accept_value}) - Servo akan ke 120°")
                 time.sleep(3)
                 self._send_cmd("test_fail")
                 
@@ -1037,7 +859,7 @@ class App(ctk.CTk):
                 self.current_item_id = int(time.time() * 1000) % 100000
             
             self._send_cmd(f"SCAN2:{self.current_item_id}:{code}")
-            self._log(f"✓ Scanner 2: {code}")
+            print(f"✓ Scanner 2: {code}")
             
             # Cek kondisi auto PASS
             self._check_auto_pass_condition()
@@ -1056,12 +878,12 @@ class App(ctk.CTk):
                 self.current_item_id = int(time.time() * 1000) % 100000
             
             self._send_cmd(f"SCAN3:{self.current_item_id}:{code}")
-            self._log(f"✓ Scanner 3: {code}")
+            print(f"✓ Scanner 3: {code}")
             
             # Cek kondisi auto PASS
             self._check_auto_pass_condition()
         else:
-            self._log(f"❌ Format tidak dikenali: {code} (Panjang: {len(code)})")
+            print(f"❌ Format tidak dikenali: {code} (Panjang: {len(code)})")
 
     # ================== CLOSE ==================
 
@@ -1070,7 +892,7 @@ class App(ctk.CTk):
             self._send_cmd("reset")
             time.sleep(0.5)
             self.arduino.close()
-            self._log("Arduino connection closed.")
+            print("Arduino connection closed.")
         self.destroy()
 
 
@@ -1078,4 +900,4 @@ class App(ctk.CTk):
 
 if __name__ == "__main__":
     app = App()
-    app.mainloop()
+    app.mainloop
