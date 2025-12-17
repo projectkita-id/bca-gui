@@ -572,58 +572,10 @@ class App(ctk.CTk):
         )
         self.btn_disconnect.pack(side="left", padx=3)
 
-        # Manual test buttons
-        test_frame = ctk.CTkFrame(content, fg_color="transparent")
-        test_frame.pack(fill="x", pady=(0, 6))
-
-        test_label = ctk.CTkLabel(
-            test_frame,
-            text="Manual Test:",
-            font=self.font_med,
-            text_color=TEXT_PRIMARY,
-        )
-        test_label.pack(side="left", padx=(0, 8))
-
-        btn_test_pass = ctk.CTkButton(
-            test_frame,
-            text="Test PASS (BCA0)",
-            fg_color="#4caf50",
-            hover_color="#388e3c",
-            height=28,
-            width=115,
-            font=ctk.CTkFont("Segoe UI", 11, "bold"),
-            command=lambda: self._send_cmd("test_pass"),
-        )
-        btn_test_pass.pack(side="left", padx=3)
-
-        btn_test_fail = ctk.CTkButton(
-            test_frame,
-            text="Test FAIL (BCAK)",
-            fg_color="#ff4444",
-            hover_color="#cc0000",
-            height=28,
-            width=115,
-            font=ctk.CTkFont("Segoe UI", 11, "bold"),
-            command=lambda: self._send_cmd("test_fail"),
-        )
-        btn_test_fail.pack(side="left", padx=3)
-
-        btn_status = ctk.CTkButton(
-            test_frame,
-            text="Get Status",
-            fg_color="#2196f3",
-            hover_color="#1976d2",
-            height=28,
-            width=100,
-            font=ctk.CTkFont("Segoe UI", 11, "bold"),
-            command=lambda: self._send_cmd("status"),
-        )
-        btn_status.pack(side="left", padx=3)
-
-        # Log box
+        # Log box (MANUAL TEST BUTTONS DIHAPUS)
         self.log_box = ctk.CTkTextbox(
             content,
-            height=60,
+            height=100,
             font=("Consolas", 9),
             fg_color="#ffffff",
             text_color="#333333",
