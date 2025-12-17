@@ -2,6 +2,7 @@ import os
 import platform
 import time
 import threading
+import json
 from datetime import datetime
 
 import customtkinter as ctk
@@ -27,27 +28,26 @@ HEADER_BG = "#e8ecff"
 
 
 class SettingsDialog(ctk.CTkToplevel):
-    def __init__(self, parent, current_accept_value):
+    def __init__(self, parent, current_settings):
         super().__init__(parent)
         
-        self.accept_value = current_accept_value
+        self.validation_settings = current_settings.copy()
         self.result = None
         
         # Window setup
-        self.title("Settings - Accept Value")
-        self.geometry("500x250")
+        self.title("Settings - Scanner Validation")
+        self.geometry("600x400")
         self.resizable(False, False)
         
         # Make modal
         self.transient(parent)
         
-        # Center window BEFORE showing
+        # Center window
         self.update_idletasks()
-        x = (self.winfo_screenwidth() // 2) - (500 // 2)
-        y = (self.winfo_screenheight() // 2) - (250 // 2)
-        self.geometry(f"500x250+{x}+{y}")
+        x = (self.winfo_screenwidth() // 2) - (600 // 2)
+        y = (self.winfo_screenheight() // 2) - (400 // 2)
+        self.geometry(f"600x400+{x}+{y}")
         
-        # PENTING: Urutan yang benar untuk Raspberry Pi
         self.update()
         self.deiconify()
         self.attributes('-topmost', True)
@@ -69,56 +69,108 @@ class SettingsDialog(ctk.CTkToplevel):
         # Title
         title = ctk.CTkLabel(
             main_frame,
-            text="⚙️ Scanner 1 Validation Settings",
-            font=ctk.CTkFont("Segoe UI", 18, "bold"),
+            text="⚙️ Scanner Validation Settings",
+            font=ctk.CTkFont("Segoe UI", 20, "bold"),
             text_color=BCA_BLUE
         )
-        title.pack(pady=(0, 15))
+        title.pack(pady=(0, 10))
         
         # Description
         desc = ctk.CTkLabel(
             main_frame,
-            text="Set the value that Scanner 1 should match for PASS decision.\nAny other value will be considered as REJECT (FAIL).",
+            text="Select which scanners should be validated against the database.\nChecked scanners will be compared with JSON data for PASS/FAIL decision.",
             font=ctk.CTkFont("Segoe UI", 11),
             text_color=TEXT_SECONDARY,
             justify="center"
         )
         desc.pack(pady=(0, 20))
         
-        # Accept Value Section
-        accept_frame = ctk.CTkFrame(main_frame, fg_color=CARD_BG, corner_radius=10)
-        accept_frame.pack(fill="x", pady=(0, 20))
+        # Checkbox Section
+        checkbox_container = ctk.CTkFrame(main_frame, fg_color=CARD_BG, corner_radius=12)
+        checkbox_container.pack(fill="x", pady=(0, 15))
         
-        accept_label_frame = ctk.CTkFrame(accept_frame, fg_color="transparent")
-        accept_label_frame.pack(fill="x", padx=15, pady=(12, 8))
-        
-        ctk.CTkLabel(
-            accept_label_frame,
-            text="✅ ACCEPT Value (PASS)",
-            font=ctk.CTkFont("Segoe UI", 13, "bold"),
-            text_color="#0f9d58"
-        ).pack(side="left")
-        
-        self.accept_entry = ctk.CTkEntry(
-            accept_frame,
-            height=40,
-            font=ctk.CTkFont("Consolas", 12),
-            fg_color=ENTRY_BG,
-            border_color="#0f9d58",
-            border_width=2
+        # Header
+        header_label = ctk.CTkLabel(
+            checkbox_container,
+            text="📋 Select Scanners for Validation",
+            font=ctk.CTkFont("Segoe UI", 14, "bold"),
+            text_color=BCA_BLUE
         )
-        self.accept_entry.pack(fill="x", padx=15, pady=(0, 12))
-        self.accept_entry.insert(0, self.accept_value)
-        self.accept_entry.focus()
+        header_label.pack(pady=(15, 10))
         
-        # Info label
+        # Checkboxes
+        self.checkbox_frame = ctk.CTkFrame(checkbox_container, fg_color="transparent")
+        self.checkbox_frame.pack(fill="x", padx=20, pady=(0, 15))
+        
+        # Scanner 1
+        scanner1_frame = ctk.CTkFrame(self.checkbox_frame, fg_color="#ffffff", corner_radius=8, height=50)
+        scanner1_frame.pack(fill="x", pady=5)
+        scanner1_frame.pack_propagate(False)
+        
+        self.check_scanner1 = ctk.CTkCheckBox(
+            scanner1_frame,
+            text="Scanner 1 - Primary Barcode (16 chars)",
+            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            text_color=TEXT_PRIMARY,
+            fg_color=BCA_BLUE,
+            hover_color=BCA_DARK_BLUE,
+            checkbox_width=22,
+            checkbox_height=22,
+        )
+        self.check_scanner1.pack(side="left", padx=15, pady=12)
+        if self.validation_settings.get("scanner1", True):
+            self.check_scanner1.select()
+        
+        # Scanner 2
+        scanner2_frame = ctk.CTkFrame(self.checkbox_frame, fg_color="#ffffff", corner_radius=8, height=50)
+        scanner2_frame.pack(fill="x", pady=5)
+        scanner2_frame.pack_propagate(False)
+        
+        self.check_scanner2 = ctk.CTkCheckBox(
+            scanner2_frame,
+            text="Scanner 2 - Long Barcode (BCA prefix)",
+            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            text_color=TEXT_PRIMARY,
+            fg_color=BCA_BLUE,
+            hover_color=BCA_DARK_BLUE,
+            checkbox_width=22,
+            checkbox_height=22,
+        )
+        self.check_scanner2.pack(side="left", padx=15, pady=12)
+        if self.validation_settings.get("scanner2", False):
+            self.check_scanner2.select()
+        
+        # Scanner 3
+        scanner3_frame = ctk.CTkFrame(self.checkbox_frame, fg_color="#ffffff", corner_radius=8, height=50)
+        scanner3_frame.pack(fill="x", pady=5)
+        scanner3_frame.pack_propagate(False)
+        
+        self.check_scanner3 = ctk.CTkCheckBox(
+            scanner3_frame,
+            text="Scanner 3 - Numeric Code (10 digits)",
+            font=ctk.CTkFont("Segoe UI", 12, "bold"),
+            text_color=TEXT_PRIMARY,
+            fg_color=BCA_BLUE,
+            hover_color=BCA_DARK_BLUE,
+            checkbox_width=22,
+            checkbox_height=22,
+        )
+        self.check_scanner3.pack(side="left", padx=15, pady=12)
+        if self.validation_settings.get("scanner3", False):
+            self.check_scanner3.select()
+        
+        # Info box
+        info_frame = ctk.CTkFrame(main_frame, fg_color="#e3f2fd", corner_radius=8, border_width=1, border_color="#2196f3")
+        info_frame.pack(fill="x", pady=(0, 15))
+        
         info_label = ctk.CTkLabel(
-            main_frame,
-            text="💡 Other values will automatically trigger FAIL",
+            info_frame,
+            text="💡 Only selected scanners will be compared with database entries.\nUnchecked scanners will be ignored during validation.",
             font=ctk.CTkFont("Segoe UI", 10),
-            text_color="#757575"
+            text_color="#01579b",
+            justify="left"
         )
-        info_label.pack(pady=(0, 15))
+        info_label.pack(padx=15, pady=12)
         
         # Buttons
         btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
@@ -138,7 +190,7 @@ class SettingsDialog(ctk.CTkToplevel):
         
         save_btn = ctk.CTkButton(
             btn_frame,
-            text="Save Settings",
+            text="💾 Save Settings",
             width=200,
             height=40,
             font=ctk.CTkFont("Segoe UI", 12, "bold"),
@@ -150,7 +202,9 @@ class SettingsDialog(ctk.CTkToplevel):
         
     def _save(self):
         self.result = {
-            'accept': self.accept_entry.get().strip()
+            'scanner1': self.check_scanner1.get(),
+            'scanner2': self.check_scanner2.get(),
+            'scanner3': self.check_scanner3.get(),
         }
         if self.grab_current() == self:
             self.grab_release()
@@ -266,15 +320,30 @@ class App(ctk.CTk):
         self.buffer = ""
         self.flush_job = None
 
-        # Settings untuk Accept/Reject Values
-        self.accept_value = "BCA0"
+        # *** Validation Settings ***
+        self.validation_settings = {
+            "scanner1": True,  # Default: Scanner 1 divalidasi
+            "scanner2": False,
+            "scanner3": False,
+        }
 
-        # Tracking scanner status untuk AUTO PASS FALLBACK
+        # *** Database JSON ***
+        self.database = []
+        self._load_database()
+
+        # Tracking scanner status
         self.scanner1_received = False
         self.scanner2_received = False
         self.scanner3_received = False
         self.scanner1_timeout_job = None
         self.SCANNER1_TIMEOUT = 5000
+
+        # Current scan data
+        self.current_scan_data = {
+            "SCANER 1": None,
+            "SCANER 2": None,
+            "SCANER 3": None,
+        }
 
         # ---------- EXIT BUTTON ----------
         self.bind("<Escape>", self.exit_fullscreen)
@@ -292,6 +361,110 @@ class App(ctk.CTk):
         # keybinding scanner
         self.bind_all("<Key>", self.on_key)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def _load_database(self):
+        """Load database dari file JSON"""
+        db_file = "scanner_database.json"
+        
+        # Default data jika file tidak ada
+        default_data = [
+            {
+                "SCANER 1": "BCA0210003500725",
+                "SCANER 2": "BCA100000000000000003246",
+                "SCANER 3": "1013800463"
+            },
+            {
+                "SCANER 1": "BCA0210003550725",
+                "SCANER 2": "BCA100000000000000003242",
+                "SCANER 3": "0071848463"
+            },
+            {
+                "SCANER 1": "BCA0210003500725",
+                "SCANER 2": "BCA100000000000000003241",
+                "SCANER 3": "3743345679"
+            },
+            {
+                "SCANER 1": "BCA0210003530725",
+                "SCANER 2": "BCA100000000000000003244",
+                "SCANER 3": "0670520768"
+            },
+            {
+                "SCANER 1": "BCAK210003490725",
+                "SCANER 2": "BCA100000000000000003245",
+                "SCANER 3": "3421724431"
+            },
+            {
+                "SCANER 1": "BCA0210003480725",
+                "SCANER 2": "BCA100000000000000003243",
+                "SCANER 3": "0349232675"
+            },
+            {
+                "SCANER 1": "BCA0210003550725",
+                "SCANER 2": "BCA100000000000000003228",
+                "SCANER 3": "2335274255"
+            }
+        ]
+        
+        if os.path.exists(db_file):
+            try:
+                with open(db_file, 'r') as f:
+                    self.database = json.load(f)
+                print(f"✓ Database loaded: {len(self.database)} entries")
+            except Exception as e:
+                print(f"❌ Error loading database: {e}")
+                self.database = default_data
+        else:
+            # Create file dengan default data
+            self.database = default_data
+            with open(db_file, 'w') as f:
+                json.dump(self.database, f, indent=2)
+            print(f"✓ Database created: {len(self.database)} entries")
+
+    def _validate_scan_data(self):
+        """Validasi data scan dengan database berdasarkan settings"""
+        # Cek scanner mana yang aktif
+        active_scanners = []
+        if self.validation_settings["scanner1"]:
+            active_scanners.append("SCANER 1")
+        if self.validation_settings["scanner2"]:
+            active_scanners.append("SCANER 2")
+        if self.validation_settings["scanner3"]:
+            active_scanners.append("SCANER 3")
+        
+        if not active_scanners:
+            print("⚠ No scanners enabled for validation - AUTO PASS")
+            return True, "No validation enabled"
+        
+        # Cek apakah semua scanner yang aktif sudah terisi
+        for scanner in active_scanners:
+            if not self.current_scan_data[scanner]:
+                print(f"⚠ {scanner} not scanned yet")
+                return None, "Waiting for data"
+        
+        # Compare dengan database
+        print("=" * 60)
+        print("🔍 VALIDATING AGAINST DATABASE")
+        print(f"Active scanners: {', '.join(active_scanners)}")
+        print(f"Current data:")
+        for scanner in active_scanners:
+            print(f"  {scanner}: {self.current_scan_data[scanner]}")
+        
+        # Cek setiap entry di database
+        for idx, entry in enumerate(self.database):
+            match = True
+            for scanner in active_scanners:
+                if self.current_scan_data[scanner] != entry[scanner]:
+                    match = False
+                    break
+            
+            if match:
+                print(f"✅ MATCH FOUND - Database Entry #{idx + 1}")
+                print("=" * 60)
+                return True, f"Match Entry #{idx + 1}"
+        
+        print("❌ NO MATCH FOUND in database")
+        print("=" * 60)
+        return False, "Not in database"
 
     def exit_fullscreen(self, event=None):
         """Toggle fullscreen mode with ESC key"""
@@ -499,7 +672,7 @@ class App(ctk.CTk):
         self.update()
         time.sleep(0.1)
         
-        dialog = SettingsDialog(self, self.accept_value)
+        dialog = SettingsDialog(self, self.validation_settings)
         self.wait_window(dialog)
         
         self.deiconify()
@@ -513,8 +686,13 @@ class App(ctk.CTk):
         self.focus_force()
         
         if dialog.result:
-            self.accept_value = dialog.result['accept']
-            print(f"✅ Accept Value Updated: {self.accept_value}")
+            self.validation_settings = dialog.result
+            print("=" * 60)
+            print("⚙️ VALIDATION SETTINGS UPDATED")
+            print(f"Scanner 1: {'✓ ENABLED' if self.validation_settings['scanner1'] else '✗ DISABLED'}")
+            print(f"Scanner 2: {'✓ ENABLED' if self.validation_settings['scanner2'] else '✗ DISABLED'}")
+            print(f"Scanner 3: {'✓ ENABLED' if self.validation_settings['scanner3'] else '✗ DISABLED'}")
+            print("=" * 60)
 
     # ================== SERIAL ==================
 
@@ -567,21 +745,27 @@ class App(ctk.CTk):
 
         if line.startswith("RESULT:PASS:"):
             item_id = line.split(":")[-1]
-            print(f"🟢 HASIL: BENAR (Mengandung {self.accept_value}) - ID: {item_id}")
-            self._show_result_notification("BENAR", True)
+            print(f"🟢 Arduino PASS - ID: {item_id}")
             
         elif line.startswith("RESULT:FAIL:"):
             item_id = line.split(":")[-1]
-            print(f"🔴 HASIL: SALAH (Tidak mengandung {self.accept_value}) - ID: {item_id}")
-            self._show_result_notification("SALAH", False)
+            print(f"🔴 Arduino FAIL - ID: {item_id}")
 
-    def _show_result_notification(self, result: str, is_pass: bool):
+    def _show_result_notification(self, is_pass: bool):
         if is_pass:
             self.scanner1.configure(border_color="#4caf50")
+            self.scanner2.configure(border_color="#4caf50")
+            self.scanner3.configure(border_color="#4caf50")
             self.after(2000, lambda: self.scanner1.configure(border_color=ENTRY_BORDER))
+            self.after(2000, lambda: self.scanner2.configure(border_color=ENTRY_BORDER))
+            self.after(2000, lambda: self.scanner3.configure(border_color=ENTRY_BORDER))
         else:
             self.scanner1.configure(border_color="#ff4444")
+            self.scanner2.configure(border_color="#ff4444")
+            self.scanner3.configure(border_color="#ff4444")
             self.after(2000, lambda: self.scanner1.configure(border_color=ENTRY_BORDER))
+            self.after(2000, lambda: self.scanner2.configure(border_color=ENTRY_BORDER))
+            self.after(2000, lambda: self.scanner3.configure(border_color=ENTRY_BORDER))
 
     def _send_cmd(self, cmd: str):
         if self.arduino and self.arduino.is_open:
@@ -611,7 +795,14 @@ class App(ctk.CTk):
         self.system_status_indicator.configure(text_color="#4caf50")
         self.system_status_label.configure(text="RUNNING")
         self._send_cmd("start")
-        print(f"🚀 SYSTEM STARTED - Accept: {self.accept_value}")
+        
+        print("=" * 60)
+        print("🚀 SYSTEM STARTED")
+        print(f"Database entries: {len(self.database)}")
+        print(f"Scanner 1 validation: {'✓ ON' if self.validation_settings['scanner1'] else '✗ OFF'}")
+        print(f"Scanner 2 validation: {'✓ ON' if self.validation_settings['scanner2'] else '✗ OFF'}")
+        print(f"Scanner 3 validation: {'✓ ON' if self.validation_settings['scanner3'] else '✗ OFF'}")
+        print("=" * 60)
         
         self.scanner1.clear()
         self.scanner2.clear()
@@ -627,7 +818,9 @@ class App(ctk.CTk):
         self.system_status_indicator.configure(text_color="#ff4444")
         self.system_status_label.configure(text="STOPPED")
         self._send_cmd("stop")
+        print("=" * 60)
         print("⏸ SYSTEM STOPPED")
+        print("=" * 60)
         self._send_cmd("reset")
         self.current_item_id = None
         self._reset_scanner_tracking()
@@ -639,52 +832,41 @@ class App(ctk.CTk):
         self.scanner2_received = False
         self.scanner3_received = False
         
+        self.current_scan_data = {
+            "SCANER 1": None,
+            "SCANER 2": None,
+            "SCANER 3": None,
+        }
+        
         if self.scanner1_timeout_job:
             self.after_cancel(self.scanner1_timeout_job)
             self.scanner1_timeout_job = None
 
-    def _start_scanner1_timeout(self):
-        if self.scanner1_timeout_job:
-            self.after_cancel(self.scanner1_timeout_job)
-        
-        self.scanner1_timeout_job = self.after(
-            self.SCANNER1_TIMEOUT, 
-            self._handle_scanner1_timeout
-        )
-        print(f"⏲ Scanner 1 timeout started ({self.SCANNER1_TIMEOUT/1000}s)")
+    def _check_validation_complete(self):
+        """Cek apakah semua scanner yang aktif sudah terisi"""
+        # Tunggu sebentar untuk memastikan semua scanner selesai
+        self.after(500, self._perform_validation)
 
-    def _handle_scanner1_timeout(self):
-        self.scanner1_timeout_job = None
+    def _perform_validation(self):
+        """Lakukan validasi terhadap database"""
+        is_valid, message = self._validate_scan_data()
         
-        if not self.scanner1_received:
-            print("⚠ SCANNER 1 TIMEOUT!")
-            
-            if self.scanner2_received and self.scanner3_received:
-                print(f"🔄 AUTO FALLBACK: {self.accept_value} (PASS)")
-                
-                self.scanner1.set_value("[AUTO PASS - NO SCAN]")
-                
-                if not self.current_item_id:
-                    self.current_item_id = int(time.time() * 1000) % 100000
-                
-                self._send_cmd("test_pass")
-                print(f"🟢 Servo 160° (PASS)")
-
-    def _check_auto_pass_condition(self):
-        if not self.scanner1_received and self.scanner2_received and self.scanner3_received:
-            if self.scanner1_timeout_job:
-                self.after_cancel(self.scanner1_timeout_job)
-                self.scanner1_timeout_job = None
-            
-            print(f"🔄 AUTO FALLBACK: {self.accept_value} (PASS)")
-            
-            self.scanner1.set_value("[AUTO PASS - NO SCAN]")
-            
-            if not self.current_item_id:
-                self.current_item_id = int(time.time() * 1000) % 100000
-            
+        if is_valid is None:
+            # Masih menunggu data
+            return
+        
+        # Generate Item ID jika belum ada
+        if not self.current_item_id:
+            self.current_item_id = int(time.time() * 1000) % 100000
+        
+        if is_valid:
+            print(f"🟢 VALIDATION RESULT: PASS - {message}")
             self._send_cmd("test_pass")
-            print(f"🟢 Servo 160° (PASS)")
+            self._show_result_notification(True)
+        else:
+            print(f"🔴 VALIDATION RESULT: FAIL - {message}")
+            self._send_cmd("test_fail")
+            self._show_result_notification(False)
 
     # ================== SCANNER INPUT ==================
 
@@ -734,30 +916,22 @@ class App(ctk.CTk):
 
         if scanner == "scanner1":
             self.scanner1_received = True
-            
-            if self.scanner1_timeout_job:
-                self.after_cancel(self.scanner1_timeout_job)
-                self.scanner1_timeout_job = None
-            
             self.scanner1.set_value(code)
-            self.current_item_id = int(time.time() * 1000) % 100000
+            self.current_scan_data["SCANER 1"] = code
+            
+            if not self.current_item_id:
+                self.current_item_id = int(time.time() * 1000) % 100000
+            
             self._send_cmd(f"SCAN1:{self.current_item_id}:{code}")
             print(f"✓ Scanner 1: {code}")
             
-            if self.accept_value in code:
-                print(f"🔍 LULUS ({self.accept_value}) - Servo 160°")
-                self._send_cmd("test_pass")
-            else:
-                print(f"🔍 GAGAL - Servo 120°")
-                time.sleep(3)
-                self._send_cmd("test_fail")
+            # Trigger validation check
+            self._check_validation_complete()
                 
         elif scanner == "scanner2":
             self.scanner2_received = True
             self.scanner2.set_value(code)
-            
-            if not self.scanner1_received and not self.scanner1_timeout_job:
-                self._start_scanner1_timeout()
+            self.current_scan_data["SCANER 2"] = code
             
             if not self.current_item_id:
                 self.current_item_id = int(time.time() * 1000) % 100000
@@ -765,14 +939,13 @@ class App(ctk.CTk):
             self._send_cmd(f"SCAN2:{self.current_item_id}:{code}")
             print(f"✓ Scanner 2: {code}")
             
-            self._check_auto_pass_condition()
+            # Trigger validation check
+            self._check_validation_complete()
                 
         elif scanner == "scanner3":
             self.scanner3_received = True
             self.scanner3.set_value(code)
-            
-            if not self.scanner1_received and not self.scanner1_timeout_job:
-                self._start_scanner1_timeout()
+            self.current_scan_data["SCANER 3"] = code
             
             if not self.current_item_id:
                 self.current_item_id = int(time.time() * 1000) % 100000
@@ -780,7 +953,8 @@ class App(ctk.CTk):
             self._send_cmd(f"SCAN3:{self.current_item_id}:{code}")
             print(f"✓ Scanner 3: {code}")
             
-            self._check_auto_pass_condition()
+            # Trigger validation check
+            self._check_validation_complete()
         else:
             print(f"❌ Format tidak dikenali: {code}")
 
