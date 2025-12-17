@@ -282,6 +282,10 @@ class ScannerCard(ctk.CTkFrame):
         self.entry.delete(0, "end")
         self.entry.insert(0, text)
         self.entry.configure(state="readonly")
+    
+    def get_value(self):
+        """Get current value in entry"""
+        return self.entry.get()
 
     def clear(self):
         self.entry.configure(state="normal")
@@ -320,9 +324,27 @@ class App(ctk.CTk):
         self.buffer = ""
         self.flush_job = None
 
+        # *** SESSION DATA LOGGING ***
+        self.session_data = []  # Array untuk menyimpan semua scan
+        self.session_start_time = None
+        self.session_end_time = None
+
+        # *** ANTI-DOUBLE SCAN MECHANISM ***
+        self.last_scan_data = {
+            "scanner1": "",
+            "scanner2": "",
+            "scanner3": ""
+        }
+        self.last_scan_time = {
+            "scanner1": 0,
+            "scanner2": 0,
+            "scanner3": 0
+        }
+        self.DEBOUNCE_TIME = 2000  # 2 detik cooldown
+
         # *** Validation Settings ***
         self.validation_settings = {
-            "scanner1": True,  # Default: Scanner 1 divalidasi
+            "scanner1": True,
             "scanner2": False,
             "scanner3": False,
         }
@@ -366,7 +388,7 @@ class App(ctk.CTk):
         """Load database dari file JSON"""
         db_file = "scanner_database.json"
         
-        # Default data jika file tidak ada
+        # Default data
         default_data = [
             {
                 "SCANER 1": "BCA0210003500725",
@@ -389,11 +411,6 @@ class App(ctk.CTk):
                 "SCANER 3": "0670520768"
             },
             {
-                "SCANER 1": "BCAK210003490725",
-                "SCANER 2": "BCA100000000000000003245",
-                "SCANER 3": "3421724431"
-            },
-            {
                 "SCANER 1": "BCA0210003480725",
                 "SCANER 2": "BCA100000000000000003243",
                 "SCANER 3": "0349232675"
@@ -414,15 +431,100 @@ class App(ctk.CTk):
                 print(f"❌ Error loading database: {e}")
                 self.database = default_data
         else:
-            # Create file dengan default data
             self.database = default_data
             with open(db_file, 'w') as f:
                 json.dump(self.database, f, indent=2)
             print(f"✓ Database created: {len(self.database)} entries")
 
+    def _save_session_data(self):
+        """Save session data to JSON file when STOP"""
+        if not self.session_data:
+            print("⚠ No session data to save")
+            return
+        
+        # Generate filename dengan timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"session_data_{timestamp}.json"
+        
+        # Prepare session metadata
+        session_summary = {
+            "session_info": {
+                "start_time": self.session_start_time,
+                "end_time": self.session_end_time,
+                "total_items": len(self.session_data),
+                "duration_seconds": (datetime.fromisoformat(self.session_end_time) - 
+                                   datetime.fromisoformat(self.session_start_time)).total_seconds()
+            },
+            "scan_data": self.session_data
+        }
+        
+        try:
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(session_summary, f, indent=2, ensure_ascii=False)
+            
+            print("=" * 70)
+            print("💾 SESSION DATA SAVED")
+            print(f"📁 File: {filename}")
+            print(f"📊 Total items: {len(self.session_data)}")
+            print(f"⏱ Duration: {session_summary['session_info']['duration_seconds']:.2f}s")
+            print("=" * 70)
+            
+            # Print preview data
+            print("\n📋 DATA PREVIEW (First 3 items):")
+            for i, item in enumerate(self.session_data[:3], 1):
+                print(f"\nItem #{i}:")
+                print(f"  Scanner 1: {item.get('SCANER 1', 'N/A')}")
+                print(f"  Scanner 2: {item.get('SCANER 2', 'N/A')}")
+                print(f"  Scanner 3: {item.get('SCANER 3', 'N/A')}")
+                print(f"  Result: {item.get('validation_result', 'N/A')}")
+                print(f"  Timestamp: {item.get('timestamp', 'N/A')}")
+            
+            if len(self.session_data) > 3:
+                print(f"\n... and {len(self.session_data) - 3} more items")
+            
+            print("\n" + "=" * 70)
+            
+            return filename
+            
+        except Exception as e:
+            print(f"❌ Error saving session data: {e}")
+            return None
+
+    def _add_to_session(self, scan_data, validation_result):
+        """Add completed scan to session array"""
+        session_entry = {
+            "SCANER 1": scan_data.get("SCANER 1", ""),
+            "SCANER 2": scan_data.get("SCANER 2", ""),
+            "SCANER 3": scan_data.get("SCANER 3", ""),
+            "validation_result": validation_result,
+            "timestamp": datetime.now().isoformat(),
+            "item_id": self.current_item_id
+        }
+        
+        self.session_data.append(session_entry)
+        
+        print(f"📝 Session entry #{len(self.session_data)} added:")
+        print(f"   S1: {session_entry['SCANER 1']}")
+        print(f"   S2: {session_entry['SCANER 2']}")
+        print(f"   S3: {session_entry['SCANER 3']}")
+        print(f"   Result: {validation_result}")
+
+    def _is_duplicate_scan(self, scanner_name, code):
+        """Cek apakah scan adalah duplikat (debouncing)"""
+        current_time = int(time.time() * 1000)
+        
+        if self.last_scan_data[scanner_name] == code:
+            time_diff = current_time - self.last_scan_time[scanner_name]
+            if time_diff < self.DEBOUNCE_TIME:
+                print(f"⚠ DUPLICATE SCAN BLOCKED - {scanner_name}: {code} (dalam {time_diff}ms)")
+                return True
+        
+        self.last_scan_data[scanner_name] = code
+        self.last_scan_time[scanner_name] = current_time
+        return False
+
     def _validate_scan_data(self):
         """Validasi data scan dengan database berdasarkan settings"""
-        # Cek scanner mana yang aktif
         active_scanners = []
         if self.validation_settings["scanner1"]:
             active_scanners.append("SCANER 1")
@@ -435,13 +537,11 @@ class App(ctk.CTk):
             print("⚠ No scanners enabled for validation - AUTO PASS")
             return True, "No validation enabled"
         
-        # Cek apakah semua scanner yang aktif sudah terisi
         for scanner in active_scanners:
             if not self.current_scan_data[scanner]:
                 print(f"⚠ {scanner} not scanned yet")
                 return None, "Waiting for data"
         
-        # Compare dengan database
         print("=" * 60)
         print("🔍 VALIDATING AGAINST DATABASE")
         print(f"Active scanners: {', '.join(active_scanners)}")
@@ -449,7 +549,6 @@ class App(ctk.CTk):
         for scanner in active_scanners:
             print(f"  {scanner}: {self.current_scan_data[scanner]}")
         
-        # Cek setiap entry di database
         for idx, entry in enumerate(self.database):
             match = True
             for scanner in active_scanners:
@@ -486,7 +585,6 @@ class App(ctk.CTk):
         content = ctk.CTkFrame(header, fg_color="transparent")
         content.pack(fill="both", expand=True, padx=30)
 
-        # Logo di kiri
         logo_frame = ctk.CTkFrame(content, fg_color="transparent")
         logo_frame.pack(side="left", fill="y")
 
@@ -505,11 +603,9 @@ class App(ctk.CTk):
             )
             title.pack()
 
-        # Status indicators di kanan
         status_frame = ctk.CTkFrame(content, fg_color="transparent")
         status_frame.pack(side="right", fill="y")
 
-        # Arduino Connection Status
         arduino_container = ctk.CTkFrame(
             status_frame,
             fg_color="#f0f0f0",
@@ -551,7 +647,6 @@ class App(ctk.CTk):
         )
         self.arduino_port_label.pack(anchor="w")
 
-        # System Status
         system_container = ctk.CTkFrame(
             status_frame,
             fg_color="#f0f0f0",
@@ -594,7 +689,6 @@ class App(ctk.CTk):
         self.system_status_label.pack(anchor="w")
 
     def _build_scanners(self):
-        # Container yang mengambil sisa ruang layar
         container = ctk.CTkFrame(self, fg_color="transparent")
         container.pack(fill="both", expand=True, padx=30, pady=(0, 8))
 
@@ -658,7 +752,7 @@ class App(ctk.CTk):
     # ================== SETTINGS ==================
 
     def open_settings(self):
-        """Open settings dialog - Raspberry Pi optimized"""
+        """Open settings dialog"""
         was_override = self.overrideredirect()
         was_fullscreen = self.attributes('-fullscreen')
         
@@ -796,12 +890,18 @@ class App(ctk.CTk):
         self.system_status_label.configure(text="RUNNING")
         self._send_cmd("start")
         
+        # *** INITIALIZE SESSION ***
+        self.session_data = []
+        self.session_start_time = datetime.now().isoformat()
+        
         print("=" * 60)
         print("🚀 SYSTEM STARTED")
+        print(f"📅 Session started: {self.session_start_time}")
         print(f"Database entries: {len(self.database)}")
         print(f"Scanner 1 validation: {'✓ ON' if self.validation_settings['scanner1'] else '✗ OFF'}")
         print(f"Scanner 2 validation: {'✓ ON' if self.validation_settings['scanner2'] else '✗ OFF'}")
         print(f"Scanner 3 validation: {'✓ ON' if self.validation_settings['scanner3'] else '✗ OFF'}")
+        print(f"Debounce time: {self.DEBOUNCE_TIME}ms")
         print("=" * 60)
         
         self.scanner1.clear()
@@ -818,9 +918,22 @@ class App(ctk.CTk):
         self.system_status_indicator.configure(text_color="#ff4444")
         self.system_status_label.configure(text="STOPPED")
         self._send_cmd("stop")
+        
+        # *** FINALIZE SESSION ***
+        self.session_end_time = datetime.now().isoformat()
+        
         print("=" * 60)
         print("⏸ SYSTEM STOPPED")
+        print(f"📅 Session ended: {self.session_end_time}")
         print("=" * 60)
+        
+        # *** SAVE SESSION DATA ***
+        saved_file = self._save_session_data()
+        
+        if saved_file:
+            print(f"\n✅ Data siap untuk dikirim ke database!")
+            print(f"📁 File: {saved_file}")
+        
         self._send_cmd("reset")
         self.current_item_id = None
         self._reset_scanner_tracking()
@@ -838,13 +951,23 @@ class App(ctk.CTk):
             "SCANER 3": None,
         }
         
+        self.last_scan_data = {
+            "scanner1": "",
+            "scanner2": "",
+            "scanner3": ""
+        }
+        self.last_scan_time = {
+            "scanner1": 0,
+            "scanner2": 0,
+            "scanner3": 0
+        }
+        
         if self.scanner1_timeout_job:
             self.after_cancel(self.scanner1_timeout_job)
             self.scanner1_timeout_job = None
 
     def _check_validation_complete(self):
         """Cek apakah semua scanner yang aktif sudah terisi"""
-        # Tunggu sebentar untuk memastikan semua scanner selesai
         self.after(500, self._perform_validation)
 
     def _perform_validation(self):
@@ -852,12 +975,16 @@ class App(ctk.CTk):
         is_valid, message = self._validate_scan_data()
         
         if is_valid is None:
-            # Masih menunggu data
             return
         
-        # Generate Item ID jika belum ada
         if not self.current_item_id:
             self.current_item_id = int(time.time() * 1000) % 100000
+        
+        # Determine result string
+        validation_result = "PASS" if is_valid else "FAIL"
+        
+        # *** ADD TO SESSION DATA ***
+        self._add_to_session(self.current_scan_data.copy(), validation_result)
         
         if is_valid:
             print(f"🟢 VALIDATION RESULT: PASS - {message}")
@@ -867,6 +994,25 @@ class App(ctk.CTk):
             print(f"🔴 VALIDATION RESULT: FAIL - {message}")
             self._send_cmd("test_fail")
             self._show_result_notification(False)
+        
+        # Reset untuk item berikutnya
+        self._reset_current_item()
+
+    def _reset_current_item(self):
+        """Reset current item setelah validasi selesai"""
+        self.scanner1.clear()
+        self.scanner2.clear()
+        self.scanner3.clear()
+        
+        self.scanner1_received = False
+        self.scanner2_received = False
+        self.scanner3_received = False
+        
+        self.current_scan_data = {
+            "SCANER 1": None,
+            "SCANER 2": None,
+            "SCANER 3": None,
+        }
 
     # ================== SCANNER INPUT ==================
 
@@ -915,6 +1061,14 @@ class App(ctk.CTk):
         scanner = self._identify_scanner(code)
 
         if scanner == "scanner1":
+            if self._is_duplicate_scan("scanner1", code):
+                return
+            
+            current_value = self.scanner1.get_value()
+            if current_value and current_value != "":
+                print(f"⚠ Scanner 1 sudah terisi: {current_value} - Scan diabaikan")
+                return
+            
             self.scanner1_received = True
             self.scanner1.set_value(code)
             self.current_scan_data["SCANER 1"] = code
@@ -925,10 +1079,17 @@ class App(ctk.CTk):
             self._send_cmd(f"SCAN1:{self.current_item_id}:{code}")
             print(f"✓ Scanner 1: {code}")
             
-            # Trigger validation check
             self._check_validation_complete()
                 
         elif scanner == "scanner2":
+            if self._is_duplicate_scan("scanner2", code):
+                return
+            
+            current_value = self.scanner2.get_value()
+            if current_value and current_value != "":
+                print(f"⚠ Scanner 2 sudah terisi: {current_value} - Scan diabaikan")
+                return
+            
             self.scanner2_received = True
             self.scanner2.set_value(code)
             self.current_scan_data["SCANER 2"] = code
@@ -939,10 +1100,17 @@ class App(ctk.CTk):
             self._send_cmd(f"SCAN2:{self.current_item_id}:{code}")
             print(f"✓ Scanner 2: {code}")
             
-            # Trigger validation check
             self._check_validation_complete()
                 
         elif scanner == "scanner3":
+            if self._is_duplicate_scan("scanner3", code):
+                return
+            
+            current_value = self.scanner3.get_value()
+            if current_value and current_value != "":
+                print(f"⚠ Scanner 3 sudah terisi: {current_value} - Scan diabaikan")
+                return
+            
             self.scanner3_received = True
             self.scanner3.set_value(code)
             self.current_scan_data["SCANER 3"] = code
@@ -953,7 +1121,6 @@ class App(ctk.CTk):
             self._send_cmd(f"SCAN3:{self.current_item_id}:{code}")
             print(f"✓ Scanner 3: {code}")
             
-            # Trigger validation check
             self._check_validation_complete()
         else:
             print(f"❌ Format tidak dikenali: {code}")
