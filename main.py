@@ -971,11 +971,11 @@ class App(ctk.CTk):
         try:
             # Ambil scanner_used dari settings yang dicentang
             scanner_used = []
-            if self.validationsettings.get('scanner1', False):
+            if self.validation_settings.get('scanner1', False):
                 scanner_used.append(1)
-            if self.validationsettings.get('scanner2', False):
+            if self.validation_settings.get('scanner2', False):
                 scanner_used.append(2)
-            if self.validationsettings.get('scanner3', False):
+            if self.validation_settings.get('scanner3', False):
                 scanner_used.append(3)
             
             # Generate dummy batch_code
