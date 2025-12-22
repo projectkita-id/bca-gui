@@ -971,11 +971,11 @@ class App(ctk.CTk):
         try:
             # Ambil scanner_used dari settings yang dicentang
             scanner_used = []
-            if self.validation_settings.get('scanner1', False):
+            if self.validationsettings.get('scanner1', False):
                 scanner_used.append(1)
-            if self.validation_settings.get('scanner2', False):
+            if self.validationsettings.get('scanner2', False):
                 scanner_used.append(2)
-            if self.validation_settings.get('scanner3', False):
+            if self.validationsettings.get('scanner3', False):
                 scanner_used.append(3)
             
             # Generate dummy batch_code
@@ -988,7 +988,7 @@ class App(ctk.CTk):
             }
             
             response = requests.post(
-                "http://127.0.0.1:8000/batch/start",
+                f"http://127.0.0.1:8000/batch/start",
                 json=payload,
                 timeout=10
             )
@@ -1009,15 +1009,15 @@ class App(ctk.CTk):
         
         # ========== Lanjutkan logic START asli ==========
         self.systemrunning = True
-        self.btnstart.configure(state="disabled")
-        self.btnstop.configure(state="normal")
-        self.systemstatusindicator.configure(textcolor="4caf50")
-        self.systemstatuslabel.configure(text="RUNNING")
+        self.btn_start.configure(state="disabled")
+        self.btn_stop.configure(state="normal")
+        self.system_status_indicator.configure(textcolor="4caf50")
+        self.system_status_label.configure(text="RUNNING")
         self.sessionstarttime = datetime.now().isoformat()
         
         # Reset session data
         self.sessiondata = []
-        self.sendcmd("start")
+        self.send_cmd("start")
         
         print("60")
         print("SYSTEM STARTED")
@@ -1086,10 +1086,10 @@ class App(ctk.CTk):
         # ========== Reset semua state ==========
         self.systemrunning = False
         self.batch_record_id = None
-        self.btnstart.configure(state="normal")
-        self.btnstop.configure(state="disabled")
-        self.systemstatusindicator.configure(textcolor="#ff4444")
-        self.systemstatuslabel.configure(text="FINISHED")
+        self.btn_start.configure(state="normal")
+        self.btn_stop.configure(state="disabled")
+        self.system_status_indicator.configure(textcolor="#ff4444")
+        self.system_status_label.configure(text="FINISHED")
         
         self.sessionendtime = datetime.now().isoformat()
         print("60")
@@ -1101,8 +1101,8 @@ class App(ctk.CTk):
         self.scanner2.clear()
         self.scanner3.clear()
         self.currentitemid = None
-        self.resetscannertracking()
-        self.sendcmd("reset")
+        self.reset_scanner_tracking()
+        self.send_cmd("reset")
 
     # ================== SCANNER TRACKING ==================
 
