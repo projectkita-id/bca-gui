@@ -967,7 +967,7 @@ class App(ctk.CTk):
           print("Tidak bisa START - Arduino belum terhubung!")
           return
     
-    # ========== API CALL START ==========
+        # ========== API CALL START ==========
         try:
             # Ambil scanner_used dari settings yang dicentang
             scanner_used = []
@@ -1011,7 +1011,7 @@ class App(ctk.CTk):
         self.system_running = True
         self.btn_start.configure(state="disabled")
         self.btn_stop.configure(state="normal")
-        self.system_status_indicator.configure(textcolor="4caf50")
+        self.system_status_indicator.configure(text_color="4caf50")
         self.system_status_label.configure(text="RUNNING")
         self.session_start_time = datetime.now().isoformat()
         
@@ -1088,7 +1088,7 @@ class App(ctk.CTk):
         self.batch_record_id = None
         self.btn_start.configure(state="normal")
         self.btn_stop.configure(state="disabled")
-        self.system_status_indicator.configure(textcolor="#ff4444")
+        self.system_status_indicator.configure(text_color="#ff4444")
         self.system_status_label.configure(text="FINISHED")
         
         self.session_end_time = datetime.now().isoformat()
