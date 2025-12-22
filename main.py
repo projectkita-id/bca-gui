@@ -1008,20 +1008,20 @@ class App(ctk.CTk):
             return
         
         # ========== Lanjutkan logic START asli ==========
-        self.systemrunning = True
+        self.system_running = True
         self.btn_start.configure(state="disabled")
         self.btn_stop.configure(state="normal")
         self.system_status_indicator.configure(textcolor="4caf50")
         self.system_status_label.configure(text="RUNNING")
-        self.sessionstarttime = datetime.now().isoformat()
+        self.session_start_time = datetime.now().isoformat()
         
         # Reset session data
-        self.sessiondata = []
-        self.send_cmd("start")
+        self.session_data = []
+        self._send_cmd("start")
         
         print("60")
         print("SYSTEM STARTED")
-        print(f"Session started: {self.sessionstarttime}")
+        print(f"Session started: {self.session_start_time}")
         print(f"Batch Record ID: {self.batch_record_id}")
         print("60")
 
@@ -1034,7 +1034,7 @@ class App(ctk.CTk):
         try:
             # Format data sesuai struktur yang diminta
             finish_data = []
-            for item in self.sessiondata:
+            for item in self.session_data:
                 item_entry = {
                     "item_id": item.get("itemid"),
                 }
@@ -1076,7 +1076,7 @@ class App(ctk.CTk):
                 print(f"❌ BATCH FINISH FAILED - {response.status_code}: {response.text}")
             
             # Save local file juga
-            savedfile = self.savesessiondata()
+            savedfile = self._save_session_data()
             if savedfile:
                 print(f"   Local backup: {savedfile}")
                 
@@ -1084,25 +1084,25 @@ class App(ctk.CTk):
             print(f"❌ API FINISH ERROR: {e}")
         
         # ========== Reset semua state ==========
-        self.systemrunning = False
+        self.system_running = False
         self.batch_record_id = None
         self.btn_start.configure(state="normal")
         self.btn_stop.configure(state="disabled")
         self.system_status_indicator.configure(textcolor="#ff4444")
         self.system_status_label.configure(text="FINISHED")
         
-        self.sessionendtime = datetime.now().isoformat()
+        self.session_end_time = datetime.now().isoformat()
         print("60")
         print("SYSTEM FINISHED")
-        print(f"Session ended: {self.sessionendtime}")
+        print(f"Session ended: {self.session_end_time}")
         print("60")
         
         self.scanner1.clear()
         self.scanner2.clear()
         self.scanner3.clear()
-        self.currentitemid = None
-        self.reset_scanner_tracking()
-        self.send_cmd("reset")
+        self.current_item_id = None
+        self._reset_scanner_tracking()
+        self._send_cmd("reset")
 
     # ================== SCANNER TRACKING ==================
 
