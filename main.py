@@ -4,6 +4,7 @@ import time
 import threading
 import json
 from datetime import datetime
+import requests
 
 import customtkinter as ctk
 from PIL import Image, ImageTk
@@ -41,7 +42,9 @@ class SettingsDialog(ctk.CTkToplevel):
         
         # Make modal
         self.transient(parent)
-        
+        self.batch_record_id = None  # Simpan record_id dari API start
+        self.api_base_url = "http://127.0.0.1:8000"  # Base URL API
+
         # Center window
         self.update_idletasks()
         x = (self.winfo_screenwidth() // 2) - (600 // 2)
@@ -386,7 +389,7 @@ class App(ctk.CTk):
 
     def _load_database(self):
         """Load database dari file JSON"""
-        db_file = "scanner_database.json"
+        db_file = "dummy.json"
         
         # Default data
         default_data = [
@@ -409,6 +412,11 @@ class App(ctk.CTk):
                 "SCANER 1": "BCA0210003530725",
                 "SCANER 2": "BCA100000000000000003244",
                 "SCANER 3": "0670520768"
+            },
+            {
+                "SCANER 1": "BCAK210003490725",
+                "SCANER 2": "BCA100000000000000003245",
+                "SCANER 3": "3421724431"
             },
             {
                 "SCANER 1": "BCA0210003480725",
@@ -472,11 +480,14 @@ class App(ctk.CTk):
             # Print preview data
             print("\n📋 DATA PREVIEW (First 3 items):")
             for i, item in enumerate(self.session_data[:3], 1):
-                print(f"\nItem #{i}:")
-                print(f"  Scanner 1: {item.get('SCANER 1', 'N/A')}")
-                print(f"  Scanner 2: {item.get('SCANER 2', 'N/A')}")
-                print(f"  Scanner 3: {item.get('SCANER 3', 'N/A')}")
-                print(f"  Result: {item.get('validation_result', 'N/A')}")
+                print(f"\nItem #{i} (ID: {item.get('item_id', 'N/A')}):")
+                if 'scanner_1' in item:
+                    print(f"  Scanner 1: {item['scanner_1']['value']} - Valid: {item['scanner_1']['valid']}")
+                if 'scanner_2' in item:
+                    print(f"  Scanner 2: {item['scanner_2']['value']} - Valid: {item['scanner_2']['valid']}")
+                if 'scanner_3' in item:
+                    print(f"  Scanner 3: {item['scanner_3']['value']} - Valid: {item['scanner_3']['valid']}")
+                print(f"  Overall Result: {item.get('validation_result', 'N/A')}")
                 print(f"  Timestamp: {item.get('timestamp', 'N/A')}")
             
             if len(self.session_data) > 3:
@@ -490,24 +501,40 @@ class App(ctk.CTk):
             print(f"❌ Error saving session data: {e}")
             return None
 
-    def _add_to_session(self, scan_data, validation_result):
-        """Add completed scan to session array"""
+    def _add_to_session(self, scan_data, validation_details, overall_result):
+        """Add completed scan to session array with individual scanner validation"""
         session_entry = {
-            "SCANER 1": scan_data.get("SCANER 1", ""),
-            "SCANER 2": scan_data.get("SCANER 2", ""),
-            "SCANER 3": scan_data.get("SCANER 3", ""),
-            "validation_result": validation_result,
+            "item_id": self.current_item_id,
             "timestamp": datetime.now().isoformat(),
-            "item_id": self.current_item_id
+            "validation_result": overall_result
         }
+        
+        # Add scanner data only if they were scanned
+        if scan_data.get("SCANER 1"):
+            session_entry["scanner_1"] = {
+                "value": scan_data["SCANER 1"],
+                "valid": validation_details["scanner_1"]
+            }
+        
+        if scan_data.get("SCANER 2"):
+            session_entry["scanner_2"] = {
+                "value": scan_data["SCANER 2"],
+                "valid": validation_details["scanner_2"]
+            }
+        
+        if scan_data.get("SCANER 3"):
+            session_entry["scanner_3"] = {
+                "value": scan_data["SCANER 3"],
+                "valid": validation_details["scanner_3"]
+            }
         
         self.session_data.append(session_entry)
         
         print(f"📝 Session entry #{len(self.session_data)} added:")
-        print(f"   S1: {session_entry['SCANER 1']}")
-        print(f"   S2: {session_entry['SCANER 2']}")
-        print(f"   S3: {session_entry['SCANER 3']}")
-        print(f"   Result: {validation_result}")
+        for key, value in session_entry.items():
+            if key.startswith("scanner_"):
+                print(f"   {key}: {value['value']} - Valid: {value['valid']}")
+        print(f"   Overall Result: {overall_result}")
 
     def _is_duplicate_scan(self, scanner_name, code):
         """Cek apakah scan adalah duplikat (debouncing)"""
@@ -523,8 +550,20 @@ class App(ctk.CTk):
         self.last_scan_time[scanner_name] = current_time
         return False
 
+    def _validate_individual_scanner(self, scanner_key, scanner_value):
+        """Validate individual scanner value against database"""
+        if not scanner_value:
+            return None  # Not scanned
+        
+        # Check if this value exists in database for this scanner
+        for entry in self.database:
+            if entry.get(scanner_key) == scanner_value:
+                return True
+        
+        return False
+
     def _validate_scan_data(self):
-        """Validasi data scan dengan database berdasarkan settings"""
+        """Validasi data scan dengan database - individual scanner validation"""
         active_scanners = []
         if self.validation_settings["scanner1"]:
             active_scanners.append("SCANER 1")
@@ -535,35 +574,81 @@ class App(ctk.CTk):
         
         if not active_scanners:
             print("⚠ No scanners enabled for validation - AUTO PASS")
-            return True, "No validation enabled"
+            validation_details = {
+                "scanner_1": None,
+                "scanner_2": None,
+                "scanner_3": None
+            }
+            return True, "No validation enabled", validation_details
         
+        # Check if all active scanners have data
         for scanner in active_scanners:
             if not self.current_scan_data[scanner]:
                 print(f"⚠ {scanner} not scanned yet")
-                return None, "Waiting for data"
+                return None, "Waiting for data", None
         
         print("=" * 60)
-        print("🔍 VALIDATING AGAINST DATABASE")
+        print("🔍 VALIDATING AGAINST DATABASE (Individual Scanner Mode)")
         print(f"Active scanners: {', '.join(active_scanners)}")
-        print(f"Current data:")
-        for scanner in active_scanners:
-            print(f"  {scanner}: {self.current_scan_data[scanner]}")
         
-        for idx, entry in enumerate(self.database):
-            match = True
-            for scanner in active_scanners:
-                if self.current_scan_data[scanner] != entry[scanner]:
-                    match = False
-                    break
-            
-            if match:
-                print(f"✅ MATCH FOUND - Database Entry #{idx + 1}")
-                print("=" * 60)
-                return True, f"Match Entry #{idx + 1}"
+        # Validate each scanner individually
+        validation_details = {
+            "scanner_1": None,
+            "scanner_2": None,
+            "scanner_3": None
+        }
         
-        print("❌ NO MATCH FOUND in database")
-        print("=" * 60)
-        return False, "Not in database"
+        # Validate Scanner 1
+        if self.current_scan_data["SCANER 1"]:
+            validation_details["scanner_1"] = self._validate_individual_scanner(
+                "SCANER 1", 
+                self.current_scan_data["SCANER 1"]
+            )
+            print(f"Scanner 1: {self.current_scan_data['SCANER 1']} - Valid: {validation_details['scanner_1']}")
+        
+        # Validate Scanner 2
+        if self.current_scan_data["SCANER 2"]:
+            validation_details["scanner_2"] = self._validate_individual_scanner(
+                "SCANER 2", 
+                self.current_scan_data["SCANER 2"]
+            )
+            print(f"Scanner 2: {self.current_scan_data['SCANER 2']} - Valid: {validation_details['scanner_2']}")
+        
+        # Validate Scanner 3
+        if self.current_scan_data["SCANER 3"]:
+            validation_details["scanner_3"] = self._validate_individual_scanner(
+                "SCANER 3", 
+                self.current_scan_data["SCANER 3"]
+            )
+            print(f"Scanner 3: {self.current_scan_data['SCANER 3']} - Valid: {validation_details['scanner_3']}")
+        
+        # Determine overall PASS/FAIL based on active scanners
+        all_valid = True
+        checked_count = 0
+        
+        if self.validation_settings["scanner1"] and validation_details["scanner_1"] is not None:
+            checked_count += 1
+            if not validation_details["scanner_1"]:
+                all_valid = False
+        
+        if self.validation_settings["scanner2"] and validation_details["scanner_2"] is not None:
+            checked_count += 1
+            if not validation_details["scanner_2"]:
+                all_valid = False
+        
+        if self.validation_settings["scanner3"] and validation_details["scanner_3"] is not None:
+            checked_count += 1
+            if not validation_details["scanner_3"]:
+                all_valid = False
+        
+        if all_valid and checked_count > 0:
+            print(f"✅ OVERALL: PASS - All {checked_count} active scanner(s) valid")
+            print("=" * 60)
+            return True, f"All {checked_count} scanner(s) valid", validation_details
+        else:
+            print(f"❌ OVERALL: FAIL - One or more scanners invalid")
+            print("=" * 60)
+            return False, "One or more scanners invalid", validation_details
 
     def exit_fullscreen(self, event=None):
         """Toggle fullscreen mode with ESC key"""
@@ -879,64 +964,145 @@ class App(ctk.CTk):
 
     def start_system(self):
         if not self.arduino or not self.arduino.is_open:
-            print("❌ Tidak bisa START: Arduino belum terhubung!")
-            return
+          print("Tidak bisa START - Arduino belum terhubung!")
+          return
+    
+    # ========== API CALL START ==========
+        try:
+            # Ambil scanner_used dari settings yang dicentang
+            scanner_used = []
+            if self.validationsettings.get('scanner1', False):
+                scanner_used.append(1)
+            if self.validationsettings.get('scanner2', False):
+                scanner_used.append(2)
+            if self.validationsettings.get('scanner3', False):
+                scanner_used.append(3)
             
-        self.system_running = True
-        self.btn_start.configure(state="disabled")
-        self.btn_stop.configure(state="normal")
+            # Generate dummy batch_code
+            import random
+            batch_code = f"BCA-2025{int(time.time() * 1000) % 1000000:06d}"
+            
+            payload = {
+                "scanner_used": scanner_used,
+                "batch_code": batch_code
+            }
+            
+            response = requests.post(
+                f"{self.api_base_url}/batch/start",
+                json=payload,
+                timeout=10
+            )
+            
+            if response.status_code == 200 or response.status_code == 201:
+                result = response.json()
+                self.batch_record_id = result.get('id')  # Asumsi API return {'id': 123}
+                print(f"✅ BATCH START SUCCESS - Record ID: {self.batch_record_id}")
+                print(f"   Scanner used: {scanner_used}")
+                print(f"   Batch code: {batch_code}")
+            else:
+                print(f"❌ BATCH START FAILED - {response.status_code}: {response.text}")
+                return  # Stop jika API gagal
+            
+        except Exception as e:
+            print(f"❌ API START ERROR: {e}")
+            return
         
-        self.system_status_indicator.configure(text_color="#4caf50")
-        self.system_status_label.configure(text="RUNNING")
-        self._send_cmd("start")
+        # ========== Lanjutkan logic START asli ==========
+        self.systemrunning = True
+        self.btnstart.configure(state="disabled")
+        self.btnstop.configure(state="normal")
+        self.systemstatusindicator.configure(textcolor="4caf50")
+        self.systemstatuslabel.configure(text="RUNNING")
+        self.sessionstarttime = datetime.now().isoformat()
         
-        # *** INITIALIZE SESSION ***
-        self.session_data = []
-        self.session_start_time = datetime.now().isoformat()
+        # Reset session data
+        self.sessiondata = []
+        self.sendcmd("start")
         
-        print("=" * 60)
-        print("🚀 SYSTEM STARTED")
-        print(f"📅 Session started: {self.session_start_time}")
-        print(f"Database entries: {len(self.database)}")
-        print(f"Scanner 1 validation: {'✓ ON' if self.validation_settings['scanner1'] else '✗ OFF'}")
-        print(f"Scanner 2 validation: {'✓ ON' if self.validation_settings['scanner2'] else '✗ OFF'}")
-        print(f"Scanner 3 validation: {'✓ ON' if self.validation_settings['scanner3'] else '✗ OFF'}")
-        print(f"Debounce time: {self.DEBOUNCE_TIME}ms")
-        print("=" * 60)
+        print("60")
+        print("SYSTEM STARTED")
+        print(f"Session started: {self.sessionstarttime}")
+        print(f"Batch Record ID: {self.batch_record_id}")
+        print("60")
+
+    def stop_system(self):
+        if not self.batch_record_id:
+            print("❌ No batch record ID - START dulu!")
+            return
+    
+    # ========== API CALL FINISH ==========
+        try:
+            # Format data sesuai struktur yang diminta
+            finish_data = []
+            for item in self.sessiondata:
+                item_entry = {
+                    "item_id": item.get("itemid"),
+                }
+                
+                # Scanner 1
+                if "scanner1" in item:
+                    item_entry["scanner_1"] = {
+                        "value": item["scanner1"]["value"],
+                        "valid": item["scanner1"]["valid"]
+                    }
+                
+                # Scanner 2  
+                if "scanner2" in item:
+                    item_entry["scanner_2"] = {
+                        "value": item["scanner2"]["value"],
+                        "valid": item["scanner2"]["valid"]
+                    }
+                
+                # Scanner 3
+                if "scanner3" in item:
+                    item_entry["scanner_3"] = {
+                        "value": item["scanner3"]["value"],
+                        "valid": item["scanner3"]["valid"]
+                    }
+                
+                finish_data.append(item_entry)
+            
+            response = requests.post(
+                f"{self.api_base_url}/batch/{self.batch_record_id}/finish",
+                json=finish_data,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                print(f"✅ BATCH FINISH SUCCESS - Record ID: {self.batch_record_id}")
+                print(f"   Total items: {len(finish_data)}")
+                print("   Data sent:", json.dumps(finish_data[:2], indent=2))  # Preview 2 items
+            else:
+                print(f"❌ BATCH FINISH FAILED - {response.status_code}: {response.text}")
+            
+            # Save local file juga
+            savedfile = self.savesessiondata()
+            if savedfile:
+                print(f"   Local backup: {savedfile}")
+                
+        except Exception as e:
+            print(f"❌ API FINISH ERROR: {e}")
+        
+        # ========== Reset semua state ==========
+        self.systemrunning = False
+        self.batch_record_id = None
+        self.btnstart.configure(state="normal")
+        self.btnstop.configure(state="disabled")
+        self.systemstatusindicator.configure(textcolor="#ff4444")
+        self.systemstatuslabel.configure(text="FINISHED")
+        
+        self.sessionendtime = datetime.now().isoformat()
+        print("60")
+        print("SYSTEM FINISHED")
+        print(f"Session ended: {self.sessionendtime}")
+        print("60")
         
         self.scanner1.clear()
         self.scanner2.clear()
         self.scanner3.clear()
-        self.current_item_id = None
-        self._reset_scanner_tracking()
-
-    def stop_system(self):
-        self.system_running = False
-        self.btn_start.configure(state="normal")
-        self.btn_stop.configure(state="disabled")
-        
-        self.system_status_indicator.configure(text_color="#ff4444")
-        self.system_status_label.configure(text="STOPPED")
-        self._send_cmd("stop")
-        
-        # *** FINALIZE SESSION ***
-        self.session_end_time = datetime.now().isoformat()
-        
-        print("=" * 60)
-        print("⏸ SYSTEM STOPPED")
-        print(f"📅 Session ended: {self.session_end_time}")
-        print("=" * 60)
-        
-        # *** SAVE SESSION DATA ***
-        saved_file = self._save_session_data()
-        
-        if saved_file:
-            print(f"\n✅ Data siap untuk dikirim ke database!")
-            print(f"📁 File: {saved_file}")
-        
-        self._send_cmd("reset")
-        self.current_item_id = None
-        self._reset_scanner_tracking()
+        self.currentitemid = None
+        self.resetscannertracking()
+        self.sendcmd("reset")
 
     # ================== SCANNER TRACKING ==================
 
@@ -972,7 +1138,7 @@ class App(ctk.CTk):
 
     def _perform_validation(self):
         """Lakukan validasi terhadap database"""
-        is_valid, message = self._validate_scan_data()
+        is_valid, message, validation_details = self._validate_scan_data()
         
         if is_valid is None:
             return
@@ -983,8 +1149,8 @@ class App(ctk.CTk):
         # Determine result string
         validation_result = "PASS" if is_valid else "FAIL"
         
-        # *** ADD TO SESSION DATA ***
-        self._add_to_session(self.current_scan_data.copy(), validation_result)
+        # *** ADD TO SESSION DATA WITH INDIVIDUAL SCANNER VALIDATION ***
+        self._add_to_session(self.current_scan_data.copy(), validation_details, validation_result)
         
         if is_valid:
             print(f"🟢 VALIDATION RESULT: PASS - {message}")
