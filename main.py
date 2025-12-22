@@ -988,7 +988,7 @@ class App(ctk.CTk):
             }
             
             response = requests.post(
-                f"{self.api_base_url}/batch/start",
+                "http://127.0.0.1:8000/batch/start",
                 json=payload,
                 timeout=10
             )
@@ -1063,7 +1063,7 @@ class App(ctk.CTk):
                 finish_data.append(item_entry)
             
             response = requests.post(
-                f"{self.api_base_url}/batch/{self.batch_record_id}/finish",
+                f"http://127.0.0.1:8000/batch/{self.batch_record_id}/finish",
                 json=finish_data,
                 timeout=10
             )
