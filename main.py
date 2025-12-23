@@ -323,6 +323,10 @@ class App(ctk.CTk):
         self.system_running = False
         self.current_item_id = None
 
+        # item tracking
+        self.current_item = None
+        self.item_counter = 0
+
         # buffer scanner
         self.buffer = ""
         self.flush_job = None
@@ -474,6 +478,43 @@ class App(ctk.CTk):
         }
 
         print("➡️ AUTO NEXT ITEM (tanpa clear UI)")
+
+    def _start_new_item(self, scanner1_code: str):
+        """
+        Buat item baru.
+        HANYA dipanggil oleh SCANNER 1
+        """
+
+        item_id = int(time.time() * 1000) % 100000
+
+        self.current_item = {
+            "item_id": item_id,
+            "timestamp": datetime.now().isoformat(),
+            "scanner_1": {
+                "value": scanner1_code,
+                "valid": None
+            },
+            "scanner_2": None,
+            "scanner_3": None
+        }
+
+        self.current_item_id = item_id
+
+        print(f"🆕 NEW ITEM STARTED - ID: {item_id}")
+
+    def _commit_current_item(self):
+        """
+        Simpan current_item ke session_data
+        """
+        if not self.current_item:
+            return
+
+        self.session_data.append(self.current_item)
+
+        print(f"📦 ITEM COMMITTED - ID: {self.current_item['item_id']}")
+
+        self.current_item = None
+        self.current_item_id = None
 
     def _save_session_data(self):
         """Save session data to JSON file when STOP"""
@@ -1079,6 +1120,9 @@ class App(ctk.CTk):
         # ========== API CALL FINISH ==========
         try:
             # Format data sesuai struktur yang diminta
+            if self.current_item:
+                self._commit_current_item()
+                
             finish_data = []
             for item in self.session_data:
                 item_entry = {
@@ -1186,7 +1230,16 @@ class App(ctk.CTk):
         validation_result = "PASS" if is_valid else "FAIL"
         
         # *** ADD TO SESSION DATA WITH INDIVIDUAL SCANNER VALIDATION ***
-        self._add_to_session(self.current_scan_data.copy(), validation_details, validation_result)
+        # self._add_to_session(self.current_scan_data.copy(), validation_details, validation_result)
+        self.current_item["validation_result"] = "PASS" if is_valid else "FAIL"
+        self.current_item["scanner_1"]["valid"] = validation_details["scanner_1"]
+
+        if self.current_item.get("scanner_2"):
+            self.current_item["scanner_2"]["valid"] = validation_details["scanner_2"]
+
+        if self.current_item.get("scanner_3"):
+            self.current_item["scanner_3"]["valid"] = validation_details["scanner_3"]
+
         
         if is_valid:
             print(f"🟢 VALIDATION RESULT: PASS - {message}")
@@ -1199,7 +1252,10 @@ class App(ctk.CTk):
         
         # Reset untuk item berikutnya
         # self._reset_current_item()
-        self.after(300, self._prepare_next_item)
+        self._commit_current_item()
+        self._prepare_next_item()
+
+        # self.after(300, self._prepare_next_item)
 
     def _reset_current_item(self):
         """Reset current item setelah validasi selesai"""
@@ -1274,8 +1330,13 @@ class App(ctk.CTk):
             
             self.scanner1_received = True
             self.scanner1.set_value(code)
-            self.current_scan_data["SCANER 1"] = code
-            
+            # self.current_scan_data["SCANER 1"] = code
+            if not self.current_item:
+                self._start_new_item(code)
+            else:
+                print("⚠ Scanner 1 datang tapi item belum di-commit")
+                return
+                        
             if not self.current_item_id:
                 self.current_item_id = int(time.time() * 1000) % 100000
             
@@ -1295,7 +1356,15 @@ class App(ctk.CTk):
             
             self.scanner2_received = True
             self.scanner2.set_value(code)
-            self.current_scan_data["SCANER 2"] = code
+            # self.current_scan_data["SCANER 2"] = code
+            if not self.current_item:
+                print("⚠ Scanner 2 tanpa item aktif - diabaikan")
+                return
+
+            self.current_item["scanner_2"] = {
+                "value": code,
+                "valid": None
+            }
             
             if not self.current_item_id:
                 self.current_item_id = int(time.time() * 1000) % 100000
@@ -1316,7 +1385,15 @@ class App(ctk.CTk):
             
             self.scanner3_received = True
             self.scanner3.set_value(code)
-            self.current_scan_data["SCANER 3"] = code
+            # self.current_scan_data["SCANER 3"] = code
+            if not self.current_item:
+                print("⚠ Scanner 3 tanpa item aktif - diabaikan")
+                return
+
+            self.current_item["scanner_3"] = {
+                "value": code,
+                "valid": None
+            }
             
             if not self.current_item_id:
                 self.current_item_id = int(time.time() * 1000) % 100000
