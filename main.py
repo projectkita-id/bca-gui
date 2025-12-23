@@ -175,19 +175,6 @@ class SettingsDialog(ctk.CTkToplevel):
         )
         info_label.pack(padx=15, pady=12)
         
-        keep_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        keep_frame.pack(fill="x", pady=(0, 10), padx=10)
-        self.check_keep_display = ctk.CTkCheckBox(
-            keep_frame,
-            text="Keep display after validation (don't clear fields)",
-            font=ctk.CTkFont("Segoe UI", 11),
-            checkbox_width=22,
-            checkbox_height=22,
-        )
-        self.check_keep_display.pack(side="left", pady=8)
-
-        if self.validation_settings.get("keep_display", True):
-            self.check_keep_display.select()
         # Buttons
         btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         btn_frame.pack(fill="x")
@@ -221,7 +208,6 @@ class SettingsDialog(ctk.CTkToplevel):
             'scanner1': self.check_scanner1.get(),
             'scanner2': self.check_scanner2.get(),
             'scanner3': self.check_scanner3.get(),
-            'keep_display': self.check_keep_display.get()
         }
         if self.grab_current() == self:
             self.grab_release()
@@ -364,7 +350,6 @@ class App(ctk.CTk):
             "scanner1": True,
             "scanner2": False,
             "scanner3": False,
-            "keep_display": True
         }
 
         # *** Database JSON ***
@@ -458,6 +443,37 @@ class App(ctk.CTk):
             with open(db_file, 'w') as f:
                 json.dump(self.database, f, indent=2)
             print(f"✓ Database created: {len(self.database)} entries")
+
+    def _prepare_next_item(self):
+        """
+        Reset internal state untuk item berikutnya
+        TANPA menghapus tampilan scanner
+        """
+        self.scanner1_received = False
+        self.scanner2_received = False
+        self.scanner3_received = False
+
+        self.current_scan_data = {
+            "SCANER 1": None,
+            "SCANER 2": None,
+            "SCANER 3": None,
+        }
+
+        self.current_item_id = None
+
+        # reset debounce supaya item baru bisa scan ulang
+        self.last_scan_data = {
+            "scanner1": "",
+            "scanner2": "",
+            "scanner3": ""
+        }
+        self.last_scan_time = {
+            "scanner1": 0,
+            "scanner2": 0,
+            "scanner3": 0
+        }
+
+        print("➡️ AUTO NEXT ITEM (tanpa clear UI)")
 
     def _save_session_data(self):
         """Save session data to JSON file when STOP"""
@@ -1056,72 +1072,80 @@ class App(ctk.CTk):
         if not self.batch_record_id:
             print("❌ No batch record ID - START dulu!")
             return
-
-        # ======== Set end time dulu ========
-        self.session_end_time = datetime.now().isoformat()
-        print(f"Session ended: {self.session_end_time}")
-
-        # ======== API CALL FINISH ========
+    
+        # ========== API CALL FINISH ==========
         try:
+            # Format data sesuai struktur yang diminta
             finish_data = []
             for item in self.session_data:
-                item_entry = {"item_id": item.get("item_id")}
+                item_entry = {
+                    "item_id": item.get("item_id"),
+                }
+                
+                # Scanner 1
                 if "scanner1" in item:
                     item_entry["scanner_1"] = {
                         "value": item["scanner1"]["value"],
                         "valid": item["scanner1"]["valid"]
                     }
+                
+                # Scanner 2  
                 if "scanner2" in item:
                     item_entry["scanner_2"] = {
                         "value": item["scanner2"]["value"],
                         "valid": item["scanner2"]["valid"]
                     }
+                
+                # Scanner 3
                 if "scanner3" in item:
                     item_entry["scanner_3"] = {
                         "value": item["scanner3"]["value"],
                         "valid": item["scanner3"]["valid"]
                     }
+                
                 finish_data.append(item_entry)
-
+            
             response = requests.post(
                 f"http://127.0.0.1:8000/batch/{self.batch_record_id}/finish",
                 json=finish_data,
                 timeout=10
             )
-
+            
             if response.status_code == 200:
                 print(f"✅ BATCH FINISH SUCCESS - Record ID: {self.batch_record_id}")
                 print(f"   Total items: {len(finish_data)}")
-                print("   Data sent:", json.dumps(finish_data[:2], indent=2))
+                print("   Data sent:", json.dumps(finish_data[:2], indent=2))  # Preview 2 items
             else:
                 print(f"❌ BATCH FINISH FAILED - {response.status_code}: {response.text}")
-
-            # ======== Save local session file ========
+            
+            # Save local file juga
             savedfile = self._save_session_data()
             if savedfile:
                 print(f"   Local backup: {savedfile}")
-
+                
         except Exception as e:
             print(f"❌ API FINISH ERROR: {e}")
-
-        # ======== Reset semua state ========
+        
+        # ========== Reset semua state ==========
         self.system_running = False
         self.batch_record_id = None
         self.btn_start.configure(state="normal")
         self.btn_stop.configure(state="disabled")
         self.system_status_indicator.configure(text_color="#ff4444")
         self.system_status_label.configure(text="FINISHED")
-
+        
+        self.session_end_time = datetime.now().isoformat()
+        print("60")
+        print("SYSTEM FINISHED")
+        print(f"Session ended: {self.session_end_time}")
+        print("60")
+        
         self.scanner1.clear()
         self.scanner2.clear()
         self.scanner3.clear()
         self.current_item_id = None
         self._reset_scanner_tracking()
-        self._send_cmd("stop")
-        print("60")
-        print("SYSTEM FINISHED")
-        print("60")
-
+        self._send_cmd("reset")
 
     # ================== SCANNER TRACKING ==================
 
@@ -1182,12 +1206,7 @@ class App(ctk.CTk):
         
         # Reset untuk item berikutnya
         # self._reset_current_item()
-        if self.validation_settings.get('keep_display', True):
-            # biarkan nilai tetap di layar — user harus tekan NEXT ITEM untuk lanjut
-            print("ℹ️ keep_display aktif — nilai hasil tetap ditampilkan. Tekan NEXT ITEM untuk lanjut.")
-        else:
-            # beri jeda singkat supaya user bisa lihat notifikasi lalu clear
-            self.after(1500, self._reset_current_item)
+        self.after(300, self._prepare_next_item)
 
     def _reset_current_item(self):
         """Reset current item setelah validasi selesai"""
