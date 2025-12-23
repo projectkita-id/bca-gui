@@ -539,7 +539,6 @@ class App(ctk.CTk):
             print(f"❌ Error saving session data: {e}")
             return None
 
-
     def _add_to_session(self, scan_data, validation_details, overall_result):
         """Add completed scan to session array with individual scanner validation"""
         session_entry = {
@@ -1074,6 +1073,8 @@ class App(ctk.CTk):
         if not self.batch_record_id:
             print("❌ No batch record ID - START dulu!")
             return
+        
+        self.session_end_time = datetime.now()
     
         # ========== API CALL FINISH ==========
         try:
@@ -1127,7 +1128,6 @@ class App(ctk.CTk):
         self.system_status_indicator.configure(text_color="#ff4444")
         self.system_status_label.configure(text="FINISHED")
         
-        self.session_end_time = datetime.now()
         print("60")
         print("SYSTEM FINISHED")
         print(f"Session ended: {self.session_end_time}")
