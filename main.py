@@ -1089,25 +1089,16 @@ class App(ctk.CTk):
                 }
                 
                 # Scanner 1
-                if "scanner1" in item:
-                    item_entry["scanner_1"] = {
-                        "value": item["scanner1"]["value"],
-                        "valid": item["scanner1"]["valid"]
-                    }
+                if "scanner_1" in item:
+                    item_entry["scanner_1"] = item["scanner_1"]
                 
                 # Scanner 2  
-                if "scanner2" in item:
-                    item_entry["scanner_2"] = {
-                        "value": item["scanner2"]["value"],
-                        "valid": item["scanner2"]["valid"]
-                    }
+                if "scanner_2" in item:
+                    item_entry["scanner_2"] = item["scanner_2"]
                 
                 # Scanner 3
-                if "scanner3" in item:
-                    item_entry["scanner_3"] = {
-                        "value": item["scanner3"]["value"],
-                        "valid": item["scanner3"]["valid"]
-                    }
+                if "scanner_3" in item:
+                    item_entry["scanner_3"] = item["scanner_3"]
                 
                 finish_data.append(item_entry)
             
