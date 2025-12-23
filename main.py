@@ -484,11 +484,11 @@ class App(ctk.CTk):
         # Pastikan start & end time selalu string ISO
         start_time = self.session_start_time
         if isinstance(start_time, datetime):
-            start_time = start_time.isoformat()
+            start_time = start_time
 
         end_time = self.session_end_time
         if isinstance(end_time, datetime):
-            end_time = end_time.isoformat()
+            end_time = end_time
 
         # Hitung durasi
         try:
@@ -1062,7 +1062,7 @@ class App(ctk.CTk):
         self.btn_stop.configure(state="normal")
         self.system_status_indicator.configure(text_color="#4caf50")
         self.system_status_label.configure(text="RUNNING")
-        self.session_start_time = datetime.now().isoformat()
+        self.session_start_time = datetime.now()
         
         # Reset session data
         self.session_data = []
@@ -1140,7 +1140,7 @@ class App(ctk.CTk):
         self.system_status_indicator.configure(text_color="#ff4444")
         self.system_status_label.configure(text="FINISHED")
         
-        self.session_end_time = datetime.now().isoformat()
+        self.session_end_time = datetime.now()
         print("60")
         print("SYSTEM FINISHED")
         print(f"Session ended: {self.session_end_time}")
@@ -1151,7 +1151,7 @@ class App(ctk.CTk):
         self.scanner3.clear()
         self.current_item_id = None
         self._reset_scanner_tracking()
-        self._send_cmd("reset")
+        self._send_cmd("stop")
 
     # ================== SCANNER TRACKING ==================
 
