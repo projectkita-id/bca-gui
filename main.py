@@ -449,57 +449,69 @@ class App(ctk.CTk):
         if not self.session_data:
             print("⚠ No session data to save")
             return
-        
+
+        # Pastikan start & end time selalu string ISO
+        start_time = self.session_start_time
+        if isinstance(start_time, datetime):
+            start_time = start_time.isoformat()
+
+        end_time = self.session_end_time
+        if isinstance(end_time, datetime):
+            end_time = end_time.isoformat()
+
+        # Hitung durasi
+        try:
+            duration_seconds = (datetime.fromisoformat(end_time) - datetime.fromisoformat(start_time)).total_seconds()
+        except Exception as e:
+            print(f"⚠ Error calculating duration: {e}")
+            duration_seconds = 0
+
         # Generate filename dengan timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"session_data_{timestamp}.json"
-        
+        timestamp_filename = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"session_data_{timestamp_filename}.json"
+
         # Prepare session metadata
         session_summary = {
             "session_info": {
-                "start_time": self.session_start_time,
-                "end_time": self.session_end_time,
+                "start_time": start_time,
+                "end_time": end_time,
                 "total_items": len(self.session_data),
-                "duration_seconds": (datetime.fromisoformat(self.session_end_time) - 
-                                   datetime.fromisoformat(self.session_start_time)).total_seconds()
+                "duration_seconds": duration_seconds
             },
             "scan_data": self.session_data
         }
-        
+
         try:
             with open(filename, 'w', encoding='utf-8') as f:
                 json.dump(session_summary, f, indent=2, ensure_ascii=False)
-            
+
             print("=" * 70)
             print("💾 SESSION DATA SAVED")
             print(f"📁 File: {filename}")
             print(f"📊 Total items: {len(self.session_data)}")
-            print(f"⏱ Duration: {session_summary['session_info']['duration_seconds']:.2f}s")
+            print(f"⏱ Duration: {duration_seconds:.2f}s")
             print("=" * 70)
-            
+
             # Print preview data
             print("\n📋 DATA PREVIEW (First 3 items):")
             for i, item in enumerate(self.session_data[:3], 1):
                 print(f"\nItem #{i} (ID: {item.get('item_id', 'N/A')}):")
-                if 'scanner_1' in item:
-                    print(f"  Scanner 1: {item['scanner_1']['value']} - Valid: {item['scanner_1']['valid']}")
-                if 'scanner_2' in item:
-                    print(f"  Scanner 2: {item['scanner_2']['value']} - Valid: {item['scanner_2']['valid']}")
-                if 'scanner_3' in item:
-                    print(f"  Scanner 3: {item['scanner_3']['value']} - Valid: {item['scanner_3']['valid']}")
+                for s in ["scanner_1", "scanner_2", "scanner_3"]:
+                    if s in item:
+                        print(f"  {s.replace('_', ' ').title()}: {item[s]['value']} - Valid: {item[s]['valid']}")
                 print(f"  Overall Result: {item.get('validation_result', 'N/A')}")
                 print(f"  Timestamp: {item.get('timestamp', 'N/A')}")
-            
+
             if len(self.session_data) > 3:
                 print(f"\n... and {len(self.session_data) - 3} more items")
-            
+
             print("\n" + "=" * 70)
-            
             return filename
-            
+
         except Exception as e:
             print(f"❌ Error saving session data: {e}")
             return None
+
 
     def _add_to_session(self, scan_data, validation_details, overall_result):
         """Add completed scan to session array with individual scanner validation"""
