@@ -583,11 +583,17 @@ class App(ctk.CTk):
         """Cek apakah scan adalah duplikat (debouncing)"""
         current_time = int(time.time() * 1000)
         
-        if self.last_scan_data[scanner_name] == code:
-            time_diff = current_time - self.last_scan_time[scanner_name]
-            if time_diff < self.DEBOUNCE_TIME:
-                print(f"⚠ DUPLICATE SCAN BLOCKED - {scanner_name}: {code} (dalam {time_diff}ms)")
-                return True
+        # if self.last_scan_data[scanner_name] == code:
+        #     time_diff = current_time - self.last_scan_time[scanner_name]
+        #     if time_diff < self.DEBOUNCE_TIME:
+        #         print(f"⚠ DUPLICATE SCAN BLOCKED - {scanner_name}: {code} (dalam {time_diff}ms)")
+        #         return True
+
+        if self.current_scan_data.get(
+            f"SCANER {scanner_name[-1]}"
+        ) == code:
+            print(f"⚠ DUPLICATE IN SAME ITEM - {scanner_name}: {code}")
+            return True
         
         self.last_scan_data[scanner_name] = code
         self.last_scan_time[scanner_name] = current_time
@@ -1274,10 +1280,10 @@ class App(ctk.CTk):
             if self._is_duplicate_scan("scanner1", code):
                 return
             
-            current_value = self.scanner1.get_value()
-            if current_value and current_value != "":
-                print(f"⚠ Scanner 1 sudah terisi: {current_value} - Scan diabaikan")
-                return
+            # current_value = self.scanner1.get_value()
+            # if current_value and current_value != "":
+            #     print(f"⚠ Scanner 1 sudah terisi: {current_value} - Scan diabaikan")
+            #     return
             
             self.scanner1_received = True
             self.scanner1.set_value(code)
@@ -1295,10 +1301,10 @@ class App(ctk.CTk):
             if self._is_duplicate_scan("scanner2", code):
                 return
             
-            current_value = self.scanner2.get_value()
-            if current_value and current_value != "":
-                print(f"⚠ Scanner 2 sudah terisi: {current_value} - Scan diabaikan")
-                return
+            # current_value = self.scanner2.get_value()
+            # if current_value and current_value != "":
+            #     print(f"⚠ Scanner 2 sudah terisi: {current_value} - Scan diabaikan")
+            #     return
             
             self.scanner2_received = True
             self.scanner2.set_value(code)
@@ -1316,10 +1322,10 @@ class App(ctk.CTk):
             if self._is_duplicate_scan("scanner3", code):
                 return
             
-            current_value = self.scanner3.get_value()
-            if current_value and current_value != "":
-                print(f"⚠ Scanner 3 sudah terisi: {current_value} - Scan diabaikan")
-                return
+            # current_value = self.scanner3.get_value()
+            # if current_value and current_value != "":
+            #     print(f"⚠ Scanner 3 sudah terisi: {current_value} - Scan diabaikan")
+            #     return
             
             self.scanner3_received = True
             self.scanner3.set_value(code)
