@@ -1041,80 +1041,72 @@ class App(ctk.CTk):
         if not self.batch_record_id:
             print("❌ No batch record ID - START dulu!")
             return
-    
-        # ========== API CALL FINISH ==========
+
+        # ======== Set end time dulu ========
+        self.session_end_time = datetime.now().isoformat()
+        print(f"Session ended: {self.session_end_time}")
+
+        # ======== API CALL FINISH ========
         try:
-            # Format data sesuai struktur yang diminta
             finish_data = []
             for item in self.session_data:
-                item_entry = {
-                    "item_id": item.get("item_id"),
-                }
-                
-                # Scanner 1
+                item_entry = {"item_id": item.get("item_id")}
                 if "scanner1" in item:
                     item_entry["scanner_1"] = {
                         "value": item["scanner1"]["value"],
                         "valid": item["scanner1"]["valid"]
                     }
-                
-                # Scanner 2  
                 if "scanner2" in item:
                     item_entry["scanner_2"] = {
                         "value": item["scanner2"]["value"],
                         "valid": item["scanner2"]["valid"]
                     }
-                
-                # Scanner 3
                 if "scanner3" in item:
                     item_entry["scanner_3"] = {
                         "value": item["scanner3"]["value"],
                         "valid": item["scanner3"]["valid"]
                     }
-                
                 finish_data.append(item_entry)
-            
+
             response = requests.post(
                 f"http://127.0.0.1:8000/batch/{self.batch_record_id}/finish",
                 json=finish_data,
                 timeout=10
             )
-            
+
             if response.status_code == 200:
                 print(f"✅ BATCH FINISH SUCCESS - Record ID: {self.batch_record_id}")
                 print(f"   Total items: {len(finish_data)}")
-                print("   Data sent:", json.dumps(finish_data[:2], indent=2))  # Preview 2 items
+                print("   Data sent:", json.dumps(finish_data[:2], indent=2))
             else:
                 print(f"❌ BATCH FINISH FAILED - {response.status_code}: {response.text}")
-            
-            # Save local file juga
+
+            # ======== Save local session file ========
             savedfile = self._save_session_data()
             if savedfile:
                 print(f"   Local backup: {savedfile}")
-                
+
         except Exception as e:
             print(f"❌ API FINISH ERROR: {e}")
-        
-        # ========== Reset semua state ==========
+
+        # ======== Reset semua state ========
         self.system_running = False
         self.batch_record_id = None
         self.btn_start.configure(state="normal")
         self.btn_stop.configure(state="disabled")
         self.system_status_indicator.configure(text_color="#ff4444")
         self.system_status_label.configure(text="FINISHED")
-        
-        self.session_end_time = datetime.now().isoformat()
-        print("60")
-        print("SYSTEM FINISHED")
-        print(f"Session ended: {self.session_end_time}")
-        print("60")
-        
+
         self.scanner1.clear()
         self.scanner2.clear()
         self.scanner3.clear()
         self.current_item_id = None
         self._reset_scanner_tracking()
         self._send_cmd("reset")
+        print("60")
+        print("SYSTEM FINISHED")
+        print("60")
+
 
     # ================== SCANNER TRACKING ==================
 
