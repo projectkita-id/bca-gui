@@ -995,7 +995,7 @@ class App(ctk.CTk):
             
             if response.status_code == 200 or response.status_code == 201:
                 result = response.json()
-                self.batch_record_id = result.get('id')  # Asumsi API return {'id': 123}
+                self.batch_record_id = result.get('record_id')  # Asumsi API return {'id': 123}
                 print(f"✅ BATCH START SUCCESS - Record ID: {self.batch_record_id}")
                 print(f"   Scanner used: {scanner_used}")
                 print(f"   Batch code: {batch_code}")
@@ -1011,7 +1011,7 @@ class App(ctk.CTk):
         self.system_running = True
         self.btn_start.configure(state="disabled")
         self.btn_stop.configure(state="normal")
-        self.system_status_indicator.configure(text_color="4caf50")
+        self.system_status_indicator.configure(text_color="#4caf50")
         self.system_status_label.configure(text="RUNNING")
         self.session_start_time = datetime.now().isoformat()
         
@@ -1030,13 +1030,13 @@ class App(ctk.CTk):
             print("❌ No batch record ID - START dulu!")
             return
     
-    # ========== API CALL FINISH ==========
+        # ========== API CALL FINISH ==========
         try:
             # Format data sesuai struktur yang diminta
             finish_data = []
             for item in self.session_data:
                 item_entry = {
-                    "item_id": item.get("itemid"),
+                    "item_id": item.get("item_id"),
                 }
                 
                 # Scanner 1
