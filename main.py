@@ -175,6 +175,19 @@ class SettingsDialog(ctk.CTkToplevel):
         )
         info_label.pack(padx=15, pady=12)
         
+        keep_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        keep_frame.pack(fill="x", pady=(0, 10), padx=10)
+        self.check_keep_display = ctk.CTkCheckBox(
+            keep_frame,
+            text="Keep display after validation (don't clear fields)",
+            font=ctk.CTkFont("Segoe UI", 11),
+            checkbox_width=22,
+            checkbox_height=22,
+        )
+        self.check_keep_display.pack(side="left", pady=8)
+
+        if self.validation_settings.get("keep_display", True):
+            self.check_keep_display.select()
         # Buttons
         btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         btn_frame.pack(fill="x")
@@ -208,6 +221,7 @@ class SettingsDialog(ctk.CTkToplevel):
             'scanner1': self.check_scanner1.get(),
             'scanner2': self.check_scanner2.get(),
             'scanner3': self.check_scanner3.get(),
+            'keep_display': self.check_keep_display.get()
         }
         if self.grab_current() == self:
             self.grab_release()
@@ -350,6 +364,7 @@ class App(ctk.CTk):
             "scanner1": True,
             "scanner2": False,
             "scanner3": False,
+            "keep_display": True
         }
 
         # *** Database JSON ***
@@ -1102,7 +1117,7 @@ class App(ctk.CTk):
         self.scanner3.clear()
         self.current_item_id = None
         self._reset_scanner_tracking()
-        self._send_cmd("reset")
+        self._send_cmd("stop")
         print("60")
         print("SYSTEM FINISHED")
         print("60")
@@ -1166,7 +1181,13 @@ class App(ctk.CTk):
             self._show_result_notification(False)
         
         # Reset untuk item berikutnya
-        self._reset_current_item()
+        # self._reset_current_item()
+        if self.validation_settings.get('keep_display', True):
+            # biarkan nilai tetap di layar — user harus tekan NEXT ITEM untuk lanjut
+            print("ℹ️ keep_display aktif — nilai hasil tetap ditampilkan. Tekan NEXT ITEM untuk lanjut.")
+        else:
+            # beri jeda singkat supaya user bisa lihat notifikasi lalu clear
+            self.after(1500, self._reset_current_item)
 
     def _reset_current_item(self):
         """Reset current item setelah validasi selesai"""
