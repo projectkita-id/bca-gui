@@ -481,23 +481,17 @@ class App(ctk.CTk):
             print("⚠ No session data to save")
             return
 
-        # Pastikan start & end time selalu string ISO
-        start_time = self.session_start_time
-        if isinstance(start_time, datetime):
-            start_time = start_time
+        # Pastikan start & end time dalam format ISO string
+        start_time = self.session_start_time.isoformat()
+        end_time = self.session_end_time.isoformat()
 
-        end_time = self.session_end_time
-        if isinstance(end_time, datetime):
-            end_time = end_time
+        # Hitung durasi (AMAN karena sudah string ISO)
+        duration_seconds = (
+            datetime.fromisoformat(end_time) -
+            datetime.fromisoformat(start_time)
+        ).total_seconds()
 
-        # Hitung durasi
-        try:
-            duration_seconds = (datetime.fromisoformat(end_time) - datetime.fromisoformat(start_time)).total_seconds()
-        except Exception as e:
-            print(f"⚠ Error calculating duration: {e}")
-            duration_seconds = 0
-
-        # Generate filename dengan timestamp
+        # Generate filename
         timestamp_filename = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"session_data_{timestamp_filename}.json"
 
@@ -523,14 +517,16 @@ class App(ctk.CTk):
             print(f"⏱ Duration: {duration_seconds:.2f}s")
             print("=" * 70)
 
-            # Print preview data
+            # Preview data
             print("\n📋 DATA PREVIEW (First 3 items):")
             for i, item in enumerate(self.session_data[:3], 1):
                 print(f"\nItem #{i} (ID: {item.get('item_id', 'N/A')}):")
                 for s in ["scanner_1", "scanner_2", "scanner_3"]:
                     if s in item:
-                        print(f"  {s.replace('_', ' ').title()}: {item[s]['value']} - Valid: {item[s]['valid']}")
-                print(f"  Overall Result: {item.get('validation_result', 'N/A')}")
+                        print(
+                            f"  {s.replace('_', ' ').title()}: "
+                            f"{item[s]['value']} - Valid: {item[s]['valid']}"
+                        )
                 print(f"  Timestamp: {item.get('timestamp', 'N/A')}")
 
             if len(self.session_data) > 3:
