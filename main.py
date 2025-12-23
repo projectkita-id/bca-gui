@@ -1122,7 +1122,7 @@ class App(ctk.CTk):
             # Format data sesuai struktur yang diminta
             if self.current_item:
                 self._commit_current_item()
-                
+
             finish_data = []
             for item in self.session_data:
                 item_entry = {
@@ -1231,7 +1231,10 @@ class App(ctk.CTk):
         
         # *** ADD TO SESSION DATA WITH INDIVIDUAL SCANNER VALIDATION ***
         # self._add_to_session(self.current_scan_data.copy(), validation_details, validation_result)
+        # simpan hasil validasi ke current_item
         self.current_item["validation_result"] = "PASS" if is_valid else "FAIL"
+
+        # set valid per scanner
         self.current_item["scanner_1"]["valid"] = validation_details["scanner_1"]
 
         if self.current_item.get("scanner_2"):
@@ -1239,7 +1242,8 @@ class App(ctk.CTk):
 
         if self.current_item.get("scanner_3"):
             self.current_item["scanner_3"]["valid"] = validation_details["scanner_3"]
-
+        
+        self._commit_current_item()
         
         if is_valid:
             print(f"🟢 VALIDATION RESULT: PASS - {message}")
@@ -1252,7 +1256,6 @@ class App(ctk.CTk):
         
         # Reset untuk item berikutnya
         # self._reset_current_item()
-        self._commit_current_item()
         self._prepare_next_item()
 
         # self.after(300, self._prepare_next_item)
