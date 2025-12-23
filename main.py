@@ -648,92 +648,26 @@ class App(ctk.CTk):
         return False
 
     def _validate_scan_data(self):
-        """Validasi data scan dengan database - individual scanner validation"""
-        active_scanners = []
-        if self.validation_settings["scanner1"]:
-            active_scanners.append("SCANER 1")
-        if self.validation_settings["scanner2"]:
-            active_scanners.append("SCANER 2")
-        if self.validation_settings["scanner3"]:
-            active_scanners.append("SCANER 3")
-        
-        if not active_scanners:
-            print("⚠ No scanners enabled for validation - AUTO PASS")
-            validation_details = {
-                "scanner_1": None,
-                "scanner_2": None,
-                "scanner_3": None
-            }
-            return True, "No validation enabled", validation_details
-        
-        # Check if all active scanners have data
-        for scanner in active_scanners:
-            if not self.current_scan_data[scanner]:
-                print(f"⚠ {scanner} not scanned yet")
-                return None, "Waiting for data", None
-        
-        print("=" * 60)
-        print("🔍 VALIDATING AGAINST DATABASE (Individual Scanner Mode)")
-        print(f"Active scanners: {', '.join(active_scanners)}")
-        
-        # Validate each scanner individually
+        if not self.current_item:
+            return None, "No active item", None
+
+        s1 = self.current_item["scanner_1"]["value"]
+        s2 = self.current_item["scanner_2"]["value"]
+        s3 = self.current_item["scanner_3"]["value"]
+
+        v1 = self._validate_individual_scanner("SCANER 1", s1)
+        v2 = self._validate_individual_scanner("SCANER 2", s2)
+        v3 = self._validate_individual_scanner("SCANER 3", s3)
+
         validation_details = {
-            "scanner_1": None,
-            "scanner_2": None,
-            "scanner_3": None
+            "scanner_1": v1,
+            "scanner_2": v2,
+            "scanner_3": v3
         }
-        
-        # Validate Scanner 1
-        if self.current_scan_data["SCANER 1"]:
-            validation_details["scanner_1"] = self._validate_individual_scanner(
-                "SCANER 1", 
-                self.current_scan_data["SCANER 1"]
-            )
-            print(f"Scanner 1: {self.current_scan_data['SCANER 1']} - Valid: {validation_details['scanner_1']}")
-        
-        # Validate Scanner 2
-        if self.current_scan_data["SCANER 2"]:
-            validation_details["scanner_2"] = self._validate_individual_scanner(
-                "SCANER 2", 
-                self.current_scan_data["SCANER 2"]
-            )
-            print(f"Scanner 2: {self.current_scan_data['SCANER 2']} - Valid: {validation_details['scanner_2']}")
-        
-        # Validate Scanner 3
-        if self.current_scan_data["SCANER 3"]:
-            validation_details["scanner_3"] = self._validate_individual_scanner(
-                "SCANER 3", 
-                self.current_scan_data["SCANER 3"]
-            )
-            print(f"Scanner 3: {self.current_scan_data['SCANER 3']} - Valid: {validation_details['scanner_3']}")
-        
-        # Determine overall PASS/FAIL based on active scanners
-        all_valid = True
-        checked_count = 0
-        
-        if self.validation_settings["scanner1"] and validation_details["scanner_1"] is not None:
-            checked_count += 1
-            if not validation_details["scanner_1"]:
-                all_valid = False
-        
-        if self.validation_settings["scanner2"] and validation_details["scanner_2"] is not None:
-            checked_count += 1
-            if not validation_details["scanner_2"]:
-                all_valid = False
-        
-        if self.validation_settings["scanner3"] and validation_details["scanner_3"] is not None:
-            checked_count += 1
-            if not validation_details["scanner_3"]:
-                all_valid = False
-        
-        if all_valid and checked_count > 0:
-            print(f"✅ OVERALL: PASS - All {checked_count} active scanner(s) valid")
-            print("=" * 60)
-            return True, f"All {checked_count} scanner(s) valid", validation_details
-        else:
-            print(f"❌ OVERALL: FAIL - One or more scanners invalid")
-            print("=" * 60)
-            return False, "One or more scanners invalid", validation_details
+
+        is_valid = v1 and v2 and v3
+        return is_valid, "All scanners checked", validation_details
+
 
     def exit_fullscreen(self, event=None):
         """Toggle fullscreen mode with ESC key"""
@@ -1213,52 +1147,42 @@ class App(ctk.CTk):
             self.scanner1_timeout_job = None
 
     def _check_validation_complete(self):
-        """Cek apakah semua scanner yang aktif sudah terisi"""
-        self.after(500, self._perform_validation)
+        if (
+            self.current_item
+            and self.current_item.get("scanner_1")
+            and self.current_item.get("scanner_2")
+            and self.current_item.get("scanner_3")
+        ):
+            self._perform_validation()
 
     def _perform_validation(self):
-        """Lakukan validasi terhadap database"""
+        if not self.current_item:
+            return
+
         is_valid, message, validation_details = self._validate_scan_data()
-        
+
         if is_valid is None:
             return
-        
-        if not self.current_item_id:
-            self.current_item_id = int(time.time() * 1000) % 100000
-        
-        # Determine result string
-        validation_result = "PASS" if is_valid else "FAIL"
-        
-        # *** ADD TO SESSION DATA WITH INDIVIDUAL SCANNER VALIDATION ***
-        # self._add_to_session(self.current_scan_data.copy(), validation_details, validation_result)
-        # simpan hasil validasi ke current_item
+
         self.current_item["validation_result"] = "PASS" if is_valid else "FAIL"
 
-        # set valid per scanner
+        # set valid flag
         self.current_item["scanner_1"]["valid"] = validation_details["scanner_1"]
+        self.current_item["scanner_2"]["valid"] = validation_details["scanner_2"]
+        self.current_item["scanner_3"]["valid"] = validation_details["scanner_3"]
 
-        if self.current_item.get("scanner_2"):
-            self.current_item["scanner_2"]["valid"] = validation_details["scanner_2"]
-
-        if self.current_item.get("scanner_3"):
-            self.current_item["scanner_3"]["valid"] = validation_details["scanner_3"]
-        
+        # === COMMIT SEKALI ===
         self._commit_current_item()
-        
+
         if is_valid:
-            print(f"🟢 VALIDATION RESULT: PASS - {message}")
             self._send_cmd("test_pass")
             self._show_result_notification(True)
         else:
-            print(f"🔴 VALIDATION RESULT: FAIL - {message}")
             self._send_cmd("test_fail")
             self._show_result_notification(False)
-        
-        # Reset untuk item berikutnya
-        # self._reset_current_item()
+
         self._prepare_next_item()
 
-        # self.after(300, self._prepare_next_item)
 
     def _reset_current_item(self):
         """Reset current item setelah validasi selesai"""
