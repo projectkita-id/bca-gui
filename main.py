@@ -1089,7 +1089,12 @@ class App(ctk.CTk):
                 # Scanner 3
                 if "scanner_3" in item:
                     item_entry["scanner_3"] = item["scanner_3"]
-                
+
+                res = item.get("validation_result")
+                if isinstance(res, str):
+                    res = res.strip().capitalize()
+                item_entry["result"] = res or "Unknown"
+
                 finish_data.append(item_entry)
             
             response = requests.post(
