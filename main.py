@@ -304,11 +304,13 @@ class ScannerCard(ctk.CTkFrame):
 class App(ctk.CTk):
     def __init__(self):
         super().__init__(fg_color=BG_MAIN)
+      # === DB watcher state (harus ada sebelum startdbwatcher dipanggil) ===
         self.dbfilepath = os.path.expanduser("~/scanner-db.json")
         self.dblastmtime = 0
         self.dbwatchjob = None
-        self.DBWATCHINTERVALMS = 10000
+        self.DBWATCHINTERVALMS = 10000  # 10 detik
         self.dbwatchenabled = True
+
 
         # ---------- ROOT CONFIG ----------
         self.title("Envelope Sorting System")
