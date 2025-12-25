@@ -391,62 +391,42 @@ class App(ctk.CTk):
         self.bind_all("<Key>", self.on_key)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
+    def reload_database(self):
+        self._load_database()
+        print("🔄 Scanner DB reloaded")
+
     def _load_database(self):
-        """Load database dari file JSON"""
-        db_file = "dummy.json"
-        
-        # Default data
-        default_data = [
-            {
-                "SCANER 1": "BCA0210003500725",
-                "SCANER 2": "BCA100000000000000003246",
-                "SCANER 3": "1013800463"
-            },
-            {
-                "SCANER 1": "BCA0210003550725",
-                "SCANER 2": "BCA100000000000000003242",
-                "SCANER 3": "0071848463"
-            },
-            {
-                "SCANER 1": "BCA0210003500725",
-                "SCANER 2": "BCA100000000000000003241",
-                "SCANER 3": "3743345679"
-            },
-            {
-                "SCANER 1": "BCA0210003530725",
-                "SCANER 2": "BCA100000000000000003244",
-                "SCANER 3": "0670520768"
-            },
-            {
-                "SCANER 1": "BCAK210003490725",
-                "SCANER 2": "BCA100000000000000003245",
-                "SCANER 3": "3421724431"
-            },
-            {
-                "SCANER 1": "BCA0210003480725",
-                "SCANER 2": "BCA100000000000000003243",
-                "SCANER 3": "0349232675"
-            },
-            {
-                "SCANER 1": "BCA0210003550725",
-                "SCANER 2": "BCA100000000000000003228",
-                "SCANER 3": "2335274255"
-            }
-        ]
-        
-        if os.path.exists(db_file):
-            try:
-                with open(db_file, 'r') as f:
-                    self.database = json.load(f)
-                print(f"✓ Database loaded: {len(self.database)} entries")
-            except Exception as e:
-                print(f"❌ Error loading database: {e}")
-                self.database = default_data
-        else:
-            self.database = default_data
-            with open(db_file, 'w') as f:
-                json.dump(self.database, f, indent=2)
-            print(f"✓ Database created: {len(self.database)} entries")
+        """
+        Load database dari ~/scanner-db.json
+        dan normalisasi ke format internal GUI
+        """
+        db_path = os.path.expanduser("~/scanner-db.json")
+
+        if not os.path.exists(db_path):
+            print(f"⚠ Database file not found: {db_path}")
+            self.database = []
+            return
+
+        try:
+            with open(db_path, "r", encoding="utf-8") as f:
+                raw_data = json.load(f)
+
+            normalized = []
+
+            for row in raw_data:
+                normalized.append({
+                    "SCANER 1": row.get("Scanner 1"),
+                    "SCANER 2": row.get("Scanner 2"),
+                    "SCANER 3": row.get("Scanner 3"),
+                })
+
+            self.database = normalized
+            print(f"✓ Database loaded from scanner-db.json ({len(self.database)} entries)")
+
+        except Exception as e:
+            print(f"❌ Error loading scanner-db.json: {e}")
+            self.database = []
+
 
     def _prepare_next_item(self):
         """
