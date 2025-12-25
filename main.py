@@ -304,6 +304,11 @@ class ScannerCard(ctk.CTkFrame):
 class App(ctk.CTk):
     def __init__(self):
         super().__init__(fg_color=BG_MAIN)
+        self.dbfilepath = os.path.expanduser("~/scanner-db.json")
+        self.dblastmtime = 0
+        self.dbwatchjob = None
+        self.DBWATCHINTERVALMS = 10000
+        self.dbwatchenabled = True
 
         # ---------- ROOT CONFIG ----------
         self.title("Envelope Sorting System")
@@ -418,7 +423,8 @@ class App(ctk.CTk):
 
     def _load_database(self):
         """Load database dari file JSON"""
-        db_file = "dummy.json"
+        db_file = self.dbfilepath
+
         
         # Default data
         default_data = [
