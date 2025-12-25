@@ -374,6 +374,13 @@ class App(ctk.CTk):
             "SCANER 3": None,
         }
 
+        # === DB watcher state (PERBAIKAN: inisialisasi di awal) ===
+        self.db_file_path = os.path.expanduser("~/scanner-db.json")
+        self.db_last_mtime = 0
+        self.db_watch_job = None
+        self.DB_WATCH_INTERVAL_MS = 10000  # 10 detik
+        self.db_watch_enabled = True
+
         # ---------- EXIT BUTTON ----------
         self.bind("<Escape>", self.exit_fullscreen)
         self.bind("<Control-q>", lambda e: self.on_close())
@@ -382,6 +389,7 @@ class App(ctk.CTk):
         self._build_header()
         self._build_scanners()
         self._build_control_panel()
+        self.start_db_watcher()
 
         # ---------- SERIAL ----------
         self._connect_arduino()
@@ -390,6 +398,33 @@ class App(ctk.CTk):
         # keybinding scanner
         self.bind_all("<Key>", self.on_key)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def start_db_watcher(self):
+        """Start database file watcher - checks every 10 seconds"""
+        # Cancel existing watcher jika ada
+        if self.db_watch_job:
+            self.after_cancel(self.db_watch_job)
+            self.db_watch_job = None
+
+        def _tick():
+            try:
+                if not self.db_watch_enabled:
+                    return
+
+                if os.path.exists(self.db_file_path):
+                    mtime = os.path.getmtime(self.db_file_path)
+                    if mtime != self.db_last_mtime:
+                        self.db_last_mtime = mtime
+                        self._load_database()
+                        print("✅ scanner-db.json changed -> reloaded")
+            except Exception as e:
+                print(f"❌ DB watcher error: {e}")
+            finally:
+                # Schedule next tick
+                self.db_watch_job = self.after(self.DB_WATCH_INTERVAL_MS, _tick)
+
+        # Start first tick
+        _tick()
 
     def reload_database(self):
         self._load_database()
@@ -1090,6 +1125,9 @@ class App(ctk.CTk):
         print("SYSTEM FINISHED")
         print(f"Session ended: {self.session_end_time}")
         print("60")
+
+        self.db_watch_enabled = True
+        self.start_db_watcher()
         
         self.scanner1.clear()
         self.scanner2.clear()
