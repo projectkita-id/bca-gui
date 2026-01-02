@@ -39,6 +39,8 @@ class SettingsDialog(ctk.CTkToplevel):
         self.title("Settings - Scanner Validation")
         self.geometry("600x400")
         self.resizable(False, False)
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
         
         # Make modal
         self.transient(parent)
@@ -58,6 +60,14 @@ class SettingsDialog(ctk.CTkToplevel):
         self.focus_force()
         
         self.after(10, self._finish_init)
+
+    def on_close(self):
+        self.result = {
+            "scanner1": self.check_scanner1.get(),
+            "scanner2": self.check_scanner2.get(),
+            "scanner3": self.check_scanner3.get(),
+        }
+        self.destroy()
         
     def _finish_init(self):
         """Finish initialization after window is shown"""
@@ -459,7 +469,7 @@ class App(ctk.CTk):
             self.database = []
 
     def get_validation_settings_path(self):
-        return os.path.expanduser("scanner-validation-settings.json")
+        return os.path.expanduser("~/scanner-validation-settings.json")
 
     def load_validation_settings(self):
         path = self.get_validation_settings_path()
