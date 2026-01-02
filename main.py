@@ -350,11 +350,7 @@ class App(ctk.CTk):
         self.DEBOUNCE_TIME = 2000  # 2 detik cooldown
 
         # *** Validation Settings ***
-        self.validation_settings = {
-            "scanner1": True,
-            "scanner2": False,
-            "scanner3": False,
-        }
+        self.validation_settings = self.load_validation_settings()
 
         # *** Database JSON ***
         self.database = []
@@ -462,6 +458,35 @@ class App(ctk.CTk):
             print(f"❌ Error loading scanner-db.json: {e}")
             self.database = []
 
+    def get_validation_settings_path(self):
+        return os.path.expanduser("scanner-validation-settings.json")
+
+    def load_validation_settings(self):
+        path = self.get_validation_settings_path()
+        default = {"scanner1": True, "scanner2": False, "scanner3": False}
+
+        try:
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                for k in default.keys():
+                    if k in data:
+                        default[k] = bool(data[k])
+
+            return default
+        except Exception as e:
+            print(f"Error loading validation settings: {e}")
+            return default
+
+    def save_validation_settings(self):
+        path = self.get_validation_settings_path()
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(self.validation_settings, f, indent=2)
+            print(f"Validation settings saved to: {path}")
+        except Exception as e:
+            print(f"Error saving validation settings: {e}")
 
     def _prepare_next_item(self):
         """
@@ -547,53 +572,28 @@ class App(ctk.CTk):
             datetime.fromisoformat(start_time)
         ).total_seconds()
 
-        # Generate filename
-        timestamp_filename = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"session_data_{timestamp_filename}.json"
+        print("=" * 70)
+        print("💾 SESSION DATA SAVED")
+        print(f"📊 Total items: {len(self.session_data)}")
+        print(f"⏱ Duration: {duration_seconds:.2f}s")
+        print("=" * 70)
 
-        # Prepare session metadata
-        session_summary = {
-            "session_info": {
-                "start_time": start_time,
-                "end_time": end_time,
-                "total_items": len(self.session_data),
-                "duration_seconds": duration_seconds
-            },
-            "scan_data": self.session_data
-        }
+        # Preview data
+        print("\n📋 DATA PREVIEW (First 3 items):")
+        for i, item in enumerate(self.session_data[:3], 1):
+            print(f"\nItem #{i} (ID: {item.get('item_id', 'N/A')}):")
+            for s in ["scanner_1", "scanner_2", "scanner_3"]:
+                if s in item:
+                    print(
+                        f"  {s.replace('_', ' ').title()}: "
+                        f"{item[s]['value']} - Valid: {item[s]['valid']}"
+                    )
+            print(f"  Timestamp: {item.get('timestamp', 'N/A')}")
 
-        try:
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(session_summary, f, indent=2, ensure_ascii=False)
+        if len(self.session_data) > 3:
+            print(f"\n... and {len(self.session_data) - 3} more items")
 
-            print("=" * 70)
-            print("💾 SESSION DATA SAVED")
-            print(f"📁 File: {filename}")
-            print(f"📊 Total items: {len(self.session_data)}")
-            print(f"⏱ Duration: {duration_seconds:.2f}s")
-            print("=" * 70)
-
-            # Preview data
-            print("\n📋 DATA PREVIEW (First 3 items):")
-            for i, item in enumerate(self.session_data[:3], 1):
-                print(f"\nItem #{i} (ID: {item.get('item_id', 'N/A')}):")
-                for s in ["scanner_1", "scanner_2", "scanner_3"]:
-                    if s in item:
-                        print(
-                            f"  {s.replace('_', ' ').title()}: "
-                            f"{item[s]['value']} - Valid: {item[s]['valid']}"
-                        )
-                print(f"  Timestamp: {item.get('timestamp', 'N/A')}")
-
-            if len(self.session_data) > 3:
-                print(f"\n... and {len(self.session_data) - 3} more items")
-
-            print("\n" + "=" * 70)
-            return filename
-
-        except Exception as e:
-            print(f"❌ Error saving session data: {e}")
-            return None
+        print("\n" + "=" * 70)
 
     def _add_to_session(self, scan_data, validation_details, overall_result):
         """Add completed scan to session array with individual scanner validation"""
@@ -900,6 +900,7 @@ class App(ctk.CTk):
         
         if dialog.result:
             self.validation_settings = dialog.result
+            self.save_validation_settings()
             print("=" * 60)
             print("⚙️ VALIDATION SETTINGS UPDATED")
             print(f"Scanner 1: {'✓ ENABLED' if self.validation_settings['scanner1'] else '✗ DISABLED'}")
@@ -1251,10 +1252,10 @@ class App(ctk.CTk):
     def _identify_scanner(self, code: str) -> str:
         code = code.strip()
         
-        if len(code) == 16:
+        if len(code) > 10 and len(code) < 20:
             return "scanner1"
         
-        if len(code) > 16 and code.startswith("BCA"):
+        if len(code) > 20 and code.startswith("BCA"):
             return "scanner2"
         
         if len(code) == 10 and code.isdigit():
