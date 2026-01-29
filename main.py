@@ -1217,37 +1217,57 @@ class App(ctk.CTk):
             return
 
         # Cek scanner 1 jika enabled
-        if self._is_scanner_enabled(1) and not self.current_item.get("scanner_1"):
-            return
+        if self._is_scanner_enabled(1):
+            s1 = self.current_item.get("scanner_1")
+            if not isinstance(s1, dict):
+                return
 
         # Cek scanner 2 jika enabled
-        if self._is_scanner_enabled(2) and not self.current_item.get("scanner_2"):
-            return
+        if self._is_scanner_enabled(2):
+            s2 = self.current_item.get("scanner_2")
+            if not isinstance(s2, dict):
+                return
 
         # Cek scanner 3 jika enabled
-        if self._is_scanner_enabled(3) and not self.current_item.get("scanner_3"):
-            return
+        if self._is_scanner_enabled(3):
+            s3 = self.current_item.get("scanner_3")
+            if not isinstance(s3, dict):
+                return
 
         # Semua scanner yang enabled sudah terisi
+        print("✅ ALL REQUIRED SCANNERS READY → VALIDATING")
         self._perform_validation()
 
     def _perform_validation(self):
         if not self.current_item:
             return
 
+        print("🔥 VALIDATION STARTED")
+        print("CURRENT ITEM:", json.dumps(self.current_item, indent=2, default=str))
+
         is_valid, message, validation_details = self._validate_scan_data()
 
         if is_valid is None:
             return
 
-        self.current_item["validation_result"] = "PASS" if is_valid else "FAIL"
+        result = "PASS" if is_valid else "FAIL"
+        self.current_item["validation_result"] = result
 
         # set valid flag
-        self.current_item["scanner_1"]["valid"] = validation_details["scanner_1"]
-        self.current_item["scanner_2"]["valid"] = validation_details["scanner_2"]
-        self.current_item["scanner_3"]["valid"] = validation_details["scanner_3"]
+        if self.current_item.get("scanner_1") and isinstance(self.current_item["scanner_1"], dict):
+            self.current_item["scanner_1"]["valid"] = validation_details["scanner_1"]
+        if self.current_item.get("scanner_2") and isinstance(self.current_item["scanner_2"], dict):
+            self.current_item["scanner_2"]["valid"] = validation_details["scanner_2"]
+        if self.current_item.get("scanner_3") and isinstance(self.current_item["scanner_3"], dict):
+            self.current_item["scanner_3"]["valid"] = validation_details["scanner_3"]
 
-        # === COMMIT SEKALI ===
+        # ✅ PRINT SEBELUM COMMIT
+        print(f"🎯 VALIDATION RESULT: {result}")
+        print(f"   Scanner 1: {validation_details['scanner_1']}")
+        print(f"   Scanner 2: {validation_details['scanner_2']}")
+        print(f"   Scanner 3: {validation_details['scanner_3']}")
+
+        # === COMMIT SETELAH PRINT ===
         self._commit_current_item()
 
         if is_valid:
@@ -1322,6 +1342,13 @@ class App(ctk.CTk):
 
         scanner = self._identify_scanner(code)
 
+        print(f"\n{'='*60}")
+        print(f"📥 SCANNER INPUT DETECTED")
+        print(f"   Code: {code}")
+        print(f"   Identified as: {scanner}")
+        print(f"   Current item exists: {self.current_item is not None}")
+        print(f"{'='*60}\n")
+
         # ========== SCANNER 1 ==========
         if scanner == "scanner1":
             # ✅ CEK ENABLED
@@ -1338,6 +1365,9 @@ class App(ctk.CTk):
             self.scanner1_received = True
             self.scanner1.set_value(code)
 
+            # ✅ ISI current_scan_data untuk anti-duplicate
+            self.current_scan_data["SCANER 1"] = code
+
             self.current_item["scanner_1"] = {
                 "value": code,
                 "valid": None
@@ -1348,6 +1378,7 @@ class App(ctk.CTk):
 
             self._send_cmd(f"SCAN1:{self.current_item_id}:{code}")
             print(f"✓ Scanner 1: {code}")
+            print(f"   Item after scan: {self.current_item}")
 
             self._check_validation_complete()
 
@@ -1361,11 +1392,19 @@ class App(ctk.CTk):
             if self._is_duplicate_scan("scanner2", code):
                 return
 
-            # ✅ START ITEM IF NEEDED
+            # ✅ PRODUCTION RULE: Scanner 2 harus tunggu Scanner 1 (jika Scanner 1 enabled)
+            if self._is_scanner_enabled(1) and not self.current_item:
+                print("⚠ Scanner 2 datang tapi item belum dimulai (Scanner 1 belum scan)")
+                return
+
+            # ✅ START ITEM IF NEEDED (jika Scanner 1 disabled)
             self._start_item_if_needed()
 
             self.scanner2_received = True
             self.scanner2.set_value(code)
+
+            # ✅ ISI current_scan_data untuk anti-duplicate
+            self.current_scan_data["SCANER 2"] = code
 
             self.current_item["scanner_2"] = {
                 "value": code,
@@ -1377,6 +1416,7 @@ class App(ctk.CTk):
 
             self._send_cmd(f"SCAN2:{self.current_item_id}:{code}")
             print(f"✓ Scanner 2: {code}")
+            print(f"   Item after scan: {self.current_item}")
 
             self._check_validation_complete()
 
@@ -1390,11 +1430,19 @@ class App(ctk.CTk):
             if self._is_duplicate_scan("scanner3", code):
                 return
 
-            # ✅ START ITEM IF NEEDED
+            # ✅ PRODUCTION RULE: Scanner 3 harus tunggu Scanner 1 (jika Scanner 1 enabled)
+            if self._is_scanner_enabled(1) and not self.current_item:
+                print("⚠ Scanner 3 datang tapi item belum dimulai (Scanner 1 belum scan)")
+                return
+
+            # ✅ START ITEM IF NEEDED (jika Scanner 1 disabled)
             self._start_item_if_needed()
 
             self.scanner3_received = True
             self.scanner3.set_value(code)
+
+            # ✅ ISI current_scan_data untuk anti-duplicate
+            self.current_scan_data["SCANER 3"] = code
 
             self.current_item["scanner_3"] = {
                 "value": code,
@@ -1406,6 +1454,7 @@ class App(ctk.CTk):
 
             self._send_cmd(f"SCAN3:{self.current_item_id}:{code}")
             print(f"✓ Scanner 3: {code}")
+            print(f"   Item after scan: {self.current_item}")
 
             self._check_validation_complete()
 
